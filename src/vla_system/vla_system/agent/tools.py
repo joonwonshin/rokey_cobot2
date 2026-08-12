@@ -17,7 +17,7 @@ level, not nested under ``function``).
 # side (vla-bridge-contract.md #7), so pick_and_hold/release had nowhere to
 # go. They used to stay in the schema for vla_robot's own standalone arm
 # control, but that path (robot_node.py) is gone now that cobot2_ws's pick_fsm
-# is the only executor -- see CLAUDE.md #3.
+# is the only executor -- see 팀 컨벤션 문서 #3.
 #
 # 2026-08-11 update: cobot2_ws's pick_fsm now DOES have a "hold it and wait"
 # state (WAIT_PLACE_TARGET, contract §13) for the specific case of a pick sent

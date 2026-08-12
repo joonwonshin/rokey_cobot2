@@ -11,7 +11,7 @@
      헤드리스에서 죽는다. 오버레이는 파라미터로 켜는 이미지 토픽으로 뺐다.
 
 ultralytics 는 **호스트 시스템 파이썬에 없다** (torch 가 numpy 를 끌어올려 apt
-cv_bridge 를 깬다 — `~/.claude/CLAUDE.md` §3). 도커 컨테이너 안에서만 돈다.
+cv_bridge 를 깬다 — `팀 컨벤션 문서` §3). 도커 컨테이너 안에서만 돈다.
 그래서 import 를 `_load_model()` 안으로 미룬다 — 이 모듈 자체는 호스트에서도
 import 되고, 순수 함수 테스트가 GPU 없이 돈다.
 """

@@ -6,9 +6,9 @@ owns:    Day1~5 스프린트 원본 계획 (PC 배치·GPU 의존 항목 분리�
 
 # Sprint Plan: M0609 Perception-Guided 6DoF 모션 제어 (nvblox + TAMP-lite)
 
-> 📁 문서 지도: [[ws/cobot2/README]] · **어느 PC에서 하느냐**는 [[ws/cobot2/plans/2026-08-01-pc-role-split]]이 나눈다.
-> Day1~3의 Octomap 충돌회피는 **2026-08-03에 실기 확인됨** → 결과는 [[ws/cobot2/review_moveit]].
-> GPU 의존 항목(Day4·nvblox·cuRobo)은 [[ws/cobot2/plans/2026-08-03-gpu-dependent-candidates]]로 분리됐다.
+> 📁 문서 지도: [문서 지도](README.md) · **어느 PC에서 하느냐**는 계획 문서(비공개)이 나눈다.
+> Day1~3의 Octomap 충돌회피는 **2026-08-03에 실기 확인됨** → 결과는 [MoveIt 검토 문서](review_moveit.md).
+> GPU 의존 항목(Day4·nvblox·cuRobo)은 계획 문서(비공개)로 분리됐다.
 
 **기간:** Day 1 – Day 5 (1주, 집중 스프린트) | **팀:** 1인 (본인)
 **환경:** ROS 2 Humble / Doosan M0609 (6축) / RealSense D435i (eye-to-hand, 고정) / Logitech C270 (eye-in-hand, 플랜지 부착) / OnRobot RG2 그리퍼 / VoiceProcess
@@ -287,7 +287,7 @@ ros2 bag record -o day3_tuning /move_group/monitored_planning_scene /joint_state
 
 **P2. 협소 입구 통과 전용 테스트 케이스 + narrow-passage 샘플러**
 — 항목명만 있고 내용 미작성. `state.md`에 잘못 섞여 들어가 있던 조각을 2026-08-03에 여기로 회수했다.
-시나리오 설계는 [[ws/cobot2/review_moveit]] §4.3(고정 장면 3종) 참고.
+시나리오 설계는 [MoveIt 검토 문서](review_moveit.md) §4.3(고정 장면 3종) 참고.
 
 ---
 

@@ -20,7 +20,7 @@ import time
 # Matches this pipeline's node executables and the launch process itself. It
 # deliberately does not match `vla_gui`, which must survive its own cleanup.
 #
-# robot_node/wrist_grasp_node were removed (CLAUDE.md #3, cobot2_ws's pick_fsm
+# robot_node/wrist_grasp_node were removed (팀 컨벤션 문서 #3, cobot2_ws's pick_fsm
 # is the sole executor now) so they are gone from this pattern too --
 # vla_pick_bridge_node is the only thing left that can race another instance
 # of itself over /vla/robot/action and /vla/pick_command.

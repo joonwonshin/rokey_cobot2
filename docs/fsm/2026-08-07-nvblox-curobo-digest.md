@@ -57,7 +57,7 @@ owns:    nvblox·cuRobo·cuMotion·GraspGenX 알고리즘 설명 · MoveIt vs cu
 
 **세 가지가 서로 다른 문제다.** 지도(nvblox/octomap)는 "어디가 막혔나"만, 플래너(cuRobo/OMPL)는
 "어떻게 지나가나"만, GraspGenX는 "손을 어디에 놓나"만 안다. 이 경계가 흐려지면
-[[ws/cobot2/plans/2026-08-05-cumotion-bringup]] §5-1의 `task_manager` 설계 규칙이 깨진다.
+계획 문서(비공개) §5-1의 `task_manager` 설계 규칙이 깨진다.
 
 ---
 
@@ -199,7 +199,7 @@ nvblox에는 세 가지 다른 장치가 있다.
 > 🔴 **이건 우리 프로젝트에서 실측으로 확인해야 할 항목이다.** 사람 팔이 지나간 자리가
 > 얼마나 오래 장애물로 남는지가 `decay` 파라미터에 달려 있는데, 우리는
 > `nvblox_base.yaml` 기본값을 그대로 쓰고 있고 이 값을 실기에서 재본 적이 없다.
-> ([[ws/cobot2/plans/2026-08-05-cumotion-bringup]] §7-2 "octomap vs nvblox 갱신 지연"이 이 측정이다.)
+> (계획 문서(비공개) §7-2 "octomap vs nvblox 갱신 지연"이 이 측정이다.)
 
 ### 1.6 ESDF 서비스 — 🔴 이름이 거짓말을 한다
 
@@ -228,7 +228,7 @@ cuMotion이 nvblox에서 세계를 받아오는 통로는 토픽이 아니라 **
 `nvblox_base.yaml`의 기본값은 **`2d`**다. 2d는 `z_min~z_max` 사이의 장애물을 **높이 한 장으로 눌러**
 슬라이스 하나만 만든다 — 지상 주행 로봇(nav2)용이다. 매니퓰레이터는 3차원으로 팔을 뻗으므로
 반드시 `3d`여야 하고, **2d 상태로 ESDF 서비스를 부르면 nvblox가 FATAL로 죽는다**
-(실기에서 겪었다 — [[ws/cobot2/plans/2026-08-05-cumotion-bringup]] §6-1a).
+(실기에서 겪었다 — 계획 문서(비공개) §6-1a).
 
 > **패턴**: nvblox의 기본값은 **주행 로봇(nav2) 기준**이다. 매니퓰레이터에 쓰려면
 > `esdf_mode` 외에도 `global_frame`, `map_clearing_frame_id` 등을 전부 다시 봐야 한다.
@@ -344,7 +344,7 @@ cuRobo는 로봇을 **구 집합**으로 근사한다. 구 대 거리장 검사�
 > `INVALID_START_STATE_SELF_COLLISION` — XRDF 구가 실제 링크보다 뚱뚱해 6쌍이 겹쳤다.
 > **같은 자세를 OMPL은 통과한다.** 6쌍을 `self_collision.ignore`에 넣어 우회했고,
 > 그중 2쌍(특히 `link_4 ↔ rg2_base_link`)은 **보호를 포기한 상태로 남아 있다.**
-> ([[ws/cobot2/plans/2026-08-05-cumotion-bringup]] §5-2)
+> (계획 문서(비공개) §5-2)
 
 > 🔴 **이건 설정 실수가 아니라 표현 방식의 구조적 대가다.** 구 근사를 쓰는 한
 > "덜 덮으면 부딪히고, 더 덮으면 못 움직인다"의 균형을 사람이 잡아줘야 한다.
@@ -416,12 +416,12 @@ cuMotion은 `use_aabb_on_request: true`로 **상자 하나만 잘라서** 받는
 **궤적 실행 중에 사람이 팔을 뻗으면 cuMotion은 모른다.**
 동적 회피를 하려면 상위(`task_manager`)가 주기적으로 stop → 재계획을 하거나,
 cuRobo MPC(`wrap/reacher/mpc.py`)를 별도로 써야 한다.
-이것이 [[ws/cobot2/plans/2026-08-05-foundationpose-graspgenx-pick]]의 **(a) 계획시점 우회 /
+이것이 계획 문서(비공개)의 **(a) 계획시점 우회 /
 (b) 실행중 stop→재계획** 선택지의 실체다.
 
 ### 3.5 그리고 cuMotion은 **octomap을 아예 안 본다**
 
-이미 [[ws/cobot2/plans/2026-08-05-cumotion-bringup]] §4-3에서 소스로 확인한 사실이라 여기서 반복하지 않는다.
+이미 계획 문서(비공개) §4-3에서 소스로 확인한 사실이라 여기서 반복하지 않는다.
 요약만: `planning_scene_diff.world.collision_objects`만 읽고 `world.octomap` 필드는 버린다.
 → **`read_esdf_world:=False`면 사람 팔이 안 보인다. 그런데 계획은 성공한다.**
 
@@ -429,7 +429,7 @@ cuRobo MPC(`wrap/reacher/mpc.py`)를 별도로 써야 한다.
 
 ## 4. GraspGenX — 파지 자세 생성
 
-> 출력 규약·폭 계산·1/10 mm 단위·상류 버그는 [[ws/cobot2/detect_graspx]]가 단일 출처다.
+> 출력 규약·폭 계산·1/10 mm 단위·상류 버그는 [GraspGenX 설계 문서](detect_graspx.md)가 단일 출처다.
 > 여기서는 **알고리즘이 무엇이냐**만 다룬다.
 
 ### 4.1 확산 생성기 + 판별기 (생성과 채점이 분리돼 있다)
@@ -476,7 +476,7 @@ cuRobo MPC(`wrap/reacher/mpc.py`)를 별도로 써야 한다.
 **어차피 못 잡을 물체에 후보를 만들지 않는다.**
 
 > 이 구조는 우리 실기 사례와 직접 이어진다: 2026-08-05에 **558 px 노이즈 덩어리를 고르고
-> 사과는 후보 0개**였던 사건([[ws/cobot2/state]] "0-b"). GraspGenX는
+> 사과는 후보 0개**였던 사건(프로젝트 상태 기록 "0-b"). GraspGenX는
 > **"어느 물체를 잡을지" 문제를 전혀 안 푼다** — 세그멘테이션이 준 덩어리를 그냥 잡는다.
 > 판별기 점수는 "이 덩어리를 잡을 수 있나"이지 "이게 사과인가"가 아니다.
 
@@ -534,7 +534,7 @@ cuMotion은 **그걸 버리고 nvblox ESDF를 자기가 따로 당겨온다**(§
 
 ### 5.3 "GPU라서 빠르다"가 왜 우리 실측에서 틀렸나
 
-우리가 잰 숫자 ([[ws/cobot2/plans/2026-08-05-cumotion-bringup]] §7-1, 로봇·카메라 없이, 빈 세계, 관절공간 목표):
+우리가 잰 숫자 (계획 문서(비공개) §7-1, 로봇·카메라 없이, 빈 세계, 관절공간 목표):
 
 | | server 중앙값 | 성공 |
 |---|---|---|
@@ -588,7 +588,7 @@ cuMotion을 켠다고 OMPL이 사라지지 않는다.
 | 디버깅 | 로그가 대체로 원인을 가리킴 | **cuMotion 로그를 봐도 nvblox가 죽은 건지 모른다**(실기에서 겪음) |
 
 우리가 cuMotion을 띄우기까지 하루에 함정 **6개**를 밟았고, 그 **전부가 "OMPL은 멀쩡한데 cuMotion만
-죽는다"** 형태였다([[ws/cobot2/state]]). 이건 우연이 아니다 — cuMotion 경로는 스택이 더 깊고
+죽는다"** 형태였다(프로젝트 상태 기록). 이건 우연이 아니다 — cuMotion 경로는 스택이 더 깊고
 (컨테이너·CUDA·서브모듈·별도 프로세스·서비스 의존), 깊은 스택은 실패 지점이 곱해진다.
 
 > **판단**: cuRobo를 "더 나은 플래너"로 도입하는 게 아니라, **"nvblox ESDF를 쓰기 위한 유일한 경로"**로
@@ -872,7 +872,7 @@ MPC(수 ms)로 가거나, 두산 `DR_QSTOP`(Stop Category 2)를 인지 루프와
 > 단 이건 **계산상의 결론이지 실측이 아니다.** 전제 두 개가 미검증이다:
 > ① 캘리브 40 mm가 정말 bias인지(무작위 성분과 분리 안 됐다) ② `activation_distance`가 유일한
 > 마진인지(구 반지름 자체가 이미 부풀려져 있어 실효 마진은 더 클 수 있다 — §2.4의 "6쌍 겹침"이 그 증거다).
-> **→ 다음 실기 과제: 캘리브 오차 정량 측정([[ws/cobot2/state]] "다음 할 일" 3번)이 이 계산의 입력이다.**
+> **→ 다음 실기 과제: 캘리브 오차 정량 측정(프로젝트 상태 기록 "다음 할 일" 3번)이 이 계산의 입력이다.**
 
 ---
 
@@ -907,7 +907,7 @@ MPC(수 ms)로 가거나, 두산 `DR_QSTOP`(Stop Category 2)를 인지 루프와
 
 우리 코드가 이미 이 구조다 — `grasp_selector.py`의 5단계 필터
 (신뢰도 → 도달범위 → 접근축 → 폭 → 재충돌)가 정확히 "K개를 하류 제약으로 거르는" 설계다
-([[ws/cobot2/detect_graspx]] §5-3).
+([GraspGenX 설계 문서](detect_graspx.md) §5-3).
 
 ### (C) 왜 확산모델인가 — multi-modal
 

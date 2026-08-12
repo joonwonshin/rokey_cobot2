@@ -30,7 +30,7 @@ export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-93}"
 
 # Python deps (openai, torch, ultralytics, ...) live in .venv, not ~/.local —
 # ~/.local is shared with the cobot2_ws account and pip installing there broke
-# its colcon build (2026-08-10 incident, see CLAUDE.md §1). The venv must have
+# its colcon build (2026-08-10 incident, see 팀 컨벤션 문서 §1). The venv must have
 # been created with --system-site-packages so rclpy stays visible.
 if [[ -f "$_vla_root/.venv/bin/activate" ]]; then
   source "$_vla_root/.venv/bin/activate"
@@ -42,7 +42,7 @@ fi
 # This machine's real overlay is ~/cobot2_ws_new/install/setup.bash (2026-08-12
 # confirmed present, byte-identical dsr_common2/DSR_ROBOT2.py to the old
 # ~/cobot2_ws copy). Only table_homography_test needs it now that robot_node/
-# wrist_grasp_node are gone (CLAUDE.md #3) -- the GUI pipeline (perception/
+# wrist_grasp_node are gone (팀 컨벤션 문서 #3) -- the GUI pipeline (perception/
 # agent/pick_bridge) runs fine without it, so a missing overlay is a note,
 # not a hard failure.
 export DOOSAN_SETUP="${DOOSAN_SETUP:-$HOME/cobot2_ws_new/install/setup.bash}"

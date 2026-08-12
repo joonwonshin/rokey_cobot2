@@ -136,7 +136,7 @@ for (d,) in c.execute("select data from messages where topic_id=?", (tid["/tf_st
 녹화의 목적은 데이터 수집이 아니라 **실기 없이 반복 가능한 입력을 확보하는 것**이다.
 넷 다 실기 점유 없이, 사람 승인 없이 랩탑에서 돈다.
 
-**1) Octomap self-filter 검증 — `2143_robot_moving`** ([[ws/cobot2/plans/2026-08-03-octomap-integration]])
+**1) Octomap self-filter 검증 — `2143_robot_moving`** (계획 문서(비공개))
 `/tf`가 실제로 변하는 유일한 bag. 재생하면서 로봇 팔 자체가 장애물로 잡히는지 본다.
 나머지 3개로는 이 검증이 성립하지 않는다.
 
@@ -279,7 +279,7 @@ ros2 bag info <bag>
   > ⚠️ **이 390 MB/s 는 고해상도 프로파일 기준이다.** 2026-08-09 실측(`424x240x15`)에서는
   > **20.0 MB/s** 였다 — 40배 넘게 벌어지므로 **프로파일을 안 밝히고 이 숫자를 인용하지 말 것.**
   > 클라우드는 비조밀(유효 depth 만 실림)이라 씬에 따라서도 흔들린다.
-  > 실측표는 [[ws/cobot2/context/constraints]] "카메라 토픽 실측 대역폭"이 단일 출처다.
+  > 실측표는 [실기 제약 문서](context/constraints.md) "카메라 토픽 실측 대역폭"이 단일 출처다.
   > (녹화에서 빼는 결정 자체는 어느 프로파일에서도 그대로 유효하다.)
 - `color/image_raw`(raw) — compressed와 중복.
 - `*/theora`, `*/compressedDepth` — 재생 시 디코드 실패가 잦다.

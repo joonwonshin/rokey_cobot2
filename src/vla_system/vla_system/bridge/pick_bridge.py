@@ -3,7 +3,7 @@
 Everything here is plain dicts, strings and dataclasses on purpose: the
 authoritative contract lives in a *different git clone*
 (``~/cobot2_ws/md/vla-bridge-contract.md``), not copied into this repo
-(CLAUDE.md #2 -- a second copy is how the two drift). Keeping the JSON shape
+(팀 컨벤션 문서 #2 -- a second copy is how the two drift). Keeping the JSON shape
 and the result-mapping table in pure functions means this file can be tested
 without a live cobot2_ws process, and it is the one place to re-read that
 contract against if the two ever disagree.

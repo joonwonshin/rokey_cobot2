@@ -29,7 +29,7 @@ owns:    MoveIt+cuMotion 스택의 파이썬 제어 · 실행 중 재계획 루�
 
 # cumotion — 실행 중 재계획으로 동적 장애물을 회피한다
 
-실행 명령·검증은 [[ws/cobot2/testcommand]], 파이프라인 파라미터는 `config/README.md`
+실행 명령·검증은 테스트 명령 모음, 파이프라인 파라미터는 `config/README.md`
 (T4~T7 노드 yaml)가 단일 출처다. 여기는 **이 패키지 코드가 왜 이렇게 생겼는지**만 둔다.
 
 | 파일 | 역할 |

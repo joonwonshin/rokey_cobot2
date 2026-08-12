@@ -718,7 +718,7 @@ class VLAApp:
         # 손목 RealSense 화면(예전 "손목 RealSense + YOLO-seg" 패널)과 GraspGenX
         # 손목 파지 기능(wrist_grasp_node) 모두 제거됨 -- cobot2_ws의 pick_fsm이
         # 유일한 실행 주체가 되면서 robot_node/wrist_grasp_node 스택 전체가
-        # 죽은 코드였다(CLAUDE.md #3).
+        # 죽은 코드였다(팀 컨벤션 문서 #3).
 
         table_frame = ttk.Frame(left, style="Panel.TFrame")
         table_frame.grid(row=3, column=0, sticky="nsew")
@@ -1170,7 +1170,7 @@ class VLAApp:
 
         # robot_node/wrist_grasp_node는 삭제됐다 -- 로봇 모션·손목 파지 모두
         # cobot2_ws pick_fsm이 전담이라 이 launch에 enable_robot/enable_wrist_grasp
-        # 인자 자체가 더 이상 없다(CLAUDE.md #3).
+        # 인자 자체가 더 이상 없다(팀 컨벤션 문서 #3).
         command = build_launch_command(
             pick_bridge=pick_bridge,
             skill_tier=bool(self.skill_tier_var.get()),

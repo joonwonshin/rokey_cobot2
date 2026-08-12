@@ -13,10 +13,10 @@ owns:    없음(파생 문서). 🟢=이 날 실기로 확인, 🔴=미검증
 > (`select_by_point`)를 구현하고 **실기로 PERCEIVE 까지 관통**시켰다.
 
 관련 정본:
-[[ws/cobot2/plans/2026-08-08-vla-integration]](설계·히스토리 단일 출처, §5 가 select_by_point 정본) ·
-[[ws/cobot2/vla-bridge-contract]](외부 repo 와의 계약) ·
+계획 문서(비공개)(설계·히스토리 단일 출처, §5 가 select_by_point 정본) ·
+[경계 계약 문서](vla-bridge-contract.md)(외부 repo 와의 계약) ·
 [`src/PACKAGES.md#voice_processing`](../src/PACKAGES.md) ·
-[[ws/cobot2/context/constraints]](실기 상수)
+[실기 제약 문서](context/constraints.md)(실기 상수)
 
 ---
 
@@ -65,7 +65,7 @@ owns:    없음(파생 문서). 🟢=이 날 실기로 확인, 🔴=미검증
 - **TTL 은 송신 타임스탬프가 아니라 수신 시각 기준**: 서로 다른 PC(시계 안 맞음) 간
   통신이라 `stamp_ns` 는 에코 용도로만 쓰고 나이는 받는 쪽이 잰다 (§5).
 - **SetParameters 로 넘기는 float 은 반드시 DOUBLE 타입 명시**(`float_param`) — 이 ws
-  는 int/float 혼동으로 노드가 죽은 이력이 반복돼 이번에도 명시적으로 방어함 (§5, CLAUDE.md 공통 규칙).
+  는 int/float 혼동으로 노드가 죽은 이력이 반복돼 이번에도 명시적으로 방어함 (§5, 팀 컨벤션 문서 공통 규칙).
 - **공유 랩탑에서는 노드 기동 전에 `/dsr01/*`·`/move_action` 이 이미 떠 있는지 먼저
   확인**한다 — 다른 세션이 로봇을 살려둔 채 작업 중일 수 있다 (§6, 오늘 실제로 겪음).
 - **"지시 없음"은 하나의 센티널(nan)로 통일**: `pixel_x/y/w/h = nan` 이 이 ws 의
@@ -284,7 +284,7 @@ VLA 와 cobot2_ws 는 **다른 프로세스·다른 프레임**에서 돈다. �
   스키마 진화(필드 추가)가 한쪽만 배포해도 하위 호환으로 굴러간다.
 - **계약서는 한쪽 repo 에만 정본을 두고 나머지는 절대경로로 참조** — `vla-bridge-contract.md`
   정본은 cobot2_ws 에만 있고 VLA 쪽엔 사본을 안 둔다(2026-08-10 사본 두 개가 어긋난
-  사고 이후 확정한 규칙, CLAUDE.md §0/§2). 두 repo 가 물리적으로 분리돼 있을 때 "계약
+  사고 이후 확정한 규칙, 팀 컨벤션 문서 §0/§2). 두 repo 가 물리적으로 분리돼 있을 때 "계약
   문서 복사 붙여넣기"가 제일 먼저 깨지는 지점이라는 걸 실사고로 확인함.
 - **`ROS_DOMAIN_ID` 명시 불일치가 조용히 아무 통신도 안 되게 만든다** 🟢: VLA 쪽은
   domain 미지정(=0 기본값), cobot2_ws 관행은 93 — 왕복 스모크에서 **양쪽 다 명시적으로

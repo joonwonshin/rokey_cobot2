@@ -8,7 +8,7 @@ owns:    move_group 실행모델 한계 · 그리퍼 SRDF 자기충돌 원인/�
 
 > 출처: `src/cumotion/README.md`(⭐-2, ⭐절), `md/state.md`. 이 문서는 그 기록을 구조도로
 > 재배열한 것 — 새 실기 사실은 없다. HTML(mermaid) 버전: 대화 중 Artifact로 발행됨.
-> **RMPflow 원리 + MPPI-MPC 비교(NotebookLM 교육용 digest)**: [[ws/cobot2/2026-08-11-rmpflow-reactive-motion-digest]]
+> **RMPflow 원리 + MPPI-MPC 비교(NotebookLM 교육용 digest)**: 관련 문서
 
 ## 요약
 

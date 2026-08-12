@@ -2,7 +2,7 @@
 #
 # 왜 여기(ws 루트)에 있나:
 #   1. 재빌드가 필요 없다. 패키지 안(`src/*/config/`)에 두면 `--symlink-install` 이어도
-#      share 가 `build/` 를 가리켜서(CLAUDE.md §4) 고쳐도 안 먹고, "왜 안 바뀌지"를 쫓게 된다.
+#      share 가 `build/` 를 가리켜서(팀 컨벤션 문서 §4) 고쳐도 안 먹고, "왜 안 바뀌지"를 쫓게 된다.
 #      여기 있으면 고치고 다시 띄우기만 하면 된다.
 #   2. 컨테이너가 ws 를 **같은 절대경로**(/home/kimkh/cobot2_ws)로 마운트한다 —
 #      호스트의 grasp_bridge_node 와 컨테이너의 yolo_seg_node 가 같은 파일을 본다.

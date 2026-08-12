@@ -35,7 +35,7 @@ YOLO 인스턴스 세그멘테이션을 ROS 토픽에 붙인다. 컬러 이미�
 
 **이 노드는 호스트에서 돌지 않는다.** 호스트 시스템 파이썬에 `ultralytics`/`torch` 가 없기
 때문이다. 넣지도 말 것 — torch 가 numpy 를 끌어올려 apt `cv_bridge` 를 깬다
-(`~/.claude/CLAUDE.md` §3).
+(`팀 컨벤션 문서` §3).
 
 2026-08-07 이 PC를 직접 측정한 상태다. **README 이전 버전(2026-08-06)의 서술은 세 항목이
 뒤집혔으므로 그대로 믿지 말 것** — 그날은 GPU도 가중치도 컨테이너도 없는 상태였다.
@@ -62,7 +62,7 @@ python3 -m pytest -p no:anyio src/graspgenx_perception/test/test_yolo_seg.py
 ```
 
 `cv_bridge` 왕복은 아직 정상이다(segfault 없음, 같은 날 실측). 자세한 것은
-[[ws/cobot2/plans/2026-08-08-vla-integration]] §2.
+계획 문서(비공개) §2.
 
 ## 빠른 실행
 
@@ -238,7 +238,7 @@ docker exec od_kimkh bash -c 'source /opt/ros/humble/setup.bash; \
 export ROS_DOMAIN_ID=93 && ros2 topic hz /probe      # 0건
 ```
 
-원인 미특정이므로 **추측으로 고치지 말 것**(`~/.claude/CLAUDE.md` §7). 전용 `/debug` 세션이
+원인 미특정이므로 **추측으로 고치지 말 것**(`팀 컨벤션 문서` §7). 전용 `/debug` 세션이
 필요하다. 유력 가설 순서: (1) `net=host` 컨테이너와 호스트가 participant 포트를 나눠 갖는
 과정에서 컨테이너 퍼블리셔가 도달 불가한 unicast locator 를 광고, (2) `docker stop` 이 남긴
 root 소유 `/dev/shm/fastrtps_*` 잔재(현재 5개), (3) 호스트 스택 재기동 스크립트가 바꾼 환경변수.
@@ -568,7 +568,7 @@ docker exec od_kimkh python3 -c "from ultralytics import YOLO; \
 ```
 
 `grasp_bridge_node` 의 **`target_classes`** 가 이걸 써서 대상을 좁힌다. 콤마 구분
-문자열이다(리스트가 아닌 이유: rcl YAML 파서의 리스트 타입 함정 — `CLAUDE.md` §4).
+문자열이다(리스트가 아닌 이유: rcl YAML 파서의 리스트 타입 함정 — `팀 컨벤션 문서` §4).
 
 ```bash
 # 탐지는 7종, grasp 연산은 사과만

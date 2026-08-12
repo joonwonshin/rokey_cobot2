@@ -171,7 +171,7 @@ def generate_launch_description():
             'obj_max_h': cfg['obj_max_h'],
             'out_dir': cfg['out_dir'],
             # 문자열로 선언한다 — 리스트였다면 rcl YAML 파서의 타입 함정을 또 밟는다
-            # (CLAUDE.md §4). ParameterValue 로 감쌀 필요도 없다.
+            # (팀 컨벤션 문서 §4). ParameterValue 로 감쌀 필요도 없다.
             'target_classes': cfg['target_classes'],
             'class_dims': cfg['class_dims'],
             'class_dims_margin_m': ParameterValue(cfg['class_dims_margin_m'], value_type=float),

@@ -30,7 +30,7 @@ set -u
 # regardless of venv activation, so a plain `colcon build` bakes
 # /usr/bin/python3 into the generated console_scripts shebang. Every real
 # node then fails at runtime with ModuleNotFoundError for torch/ultralytics/
-# openai/pymodbus/sounddevice, which live only in .venv (CLAUDE.md #1 forbids
+# openai/pymodbus/sounddevice, which live only in .venv (팀 컨벤션 문서 #1 forbids
 # --user installs). Reproduced 2026-08-10: `colcon build` -> perception_node
 # crashed with "No module named 'torch'"; `python3 -m colcon build` (venv
 # active) produced the correct .venv shebang.

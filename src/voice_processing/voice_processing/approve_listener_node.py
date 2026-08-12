@@ -41,7 +41,7 @@ r"""`WAIT_APPROVAL` 동안 사람이 **음성으로** `/pick/approve` 를 부를
 
 기본값(`approve_phrases`)에 "네"/"응"/"오케이"처럼 일상 대화에 흔한 말을 넣지 않았다 —
 실기 로봇을 움직이는 신호이므로, 대화 도중 우연히 일치하는 확률을 낮추는 쪽을 택했다
-(`~/.claude/CLAUDE.md` "실기 안전"). 필요하면 `approve_phrases` 파라미터로 바꾼다.
+(`팀 컨벤션 문서` "실기 안전"). 필요하면 `approve_phrases` 파라미터로 바꾼다.
 """
 
 import os

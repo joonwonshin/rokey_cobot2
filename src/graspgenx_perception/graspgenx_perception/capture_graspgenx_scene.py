@@ -108,7 +108,7 @@ DEFAULTS = {
     # 'class:radius_m:height_m,...' 콤마 목록. **여기 있는 클래스는 obj_radius_m/obj_max_h
     # 전역값 대신 이 실측치를 쓴다.** 형태가 고정된 공산품(콜라병·컵 등)에서 정확도가 오른다 —
     # 자연물(사과·바나나 등, 개체마다 형태가 다르다)은 넣지 않는 편이 낫다.
-    # 리스트가 아니라 문자열인 이유는 target_classes 와 같다(CLAUDE.md §4 rcl yaml 리스트 함정).
+    # 리스트가 아니라 문자열인 이유는 target_classes 와 같다(팀 컨벤션 문서 §4 rcl yaml 리스트 함정).
     # 정본은 ws 루트 `config/objects.yaml` 의 `dimensions:` — `graspx.launch.py` 가 이 문자열로
     # 변환해 넘긴다. 모르는 클래스거나 비어 있으면 **기존 동작 그대로**(전역 반경 + 상한 없음).
     # ⚠️ 이걸로 depth 자체의 결손(반사면이라 점이 아예 안 찍히는 것)은 못 고친다 — 그건

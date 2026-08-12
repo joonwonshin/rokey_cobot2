@@ -1,0 +1,104 @@
+# RealSense D435i 포인트클라우드 → MoveIt octomap (3D 장애물 감지)
+#
+# 필요: sudo apt install ros-humble-moveit-ros-perception
+#       (이게 없으면 PointCloudOctomapUpdater 플러그인 자체가 없어서
+#        move_group이 "No 3D sensor plugin(s) defined for octomap updates"를 뱉는다)
+#
+# 파라미터 이름 근거: libmoveit_ros_occupancy_map_monitor.so의 심볼에서 확인한
+# `sensors`, `octomap_frame`, `octomap_resolution`, `<sensor_name>.sensor_plugin`.
+# 그 아래 updater 개별 파라미터는 moveit_ros_perception 소스 규약을 따른다.
+#
+# ⚠️ 아래 튜닝값들은 현장에서 맞춰야 하는 값이다. 도면값이 아니다.
+#    포인트클라우드가 로봇 자신을 장애물로 잡아먹거나(padding 부족),
+#    반대로 진짜 장애물이 안 잡히면(max_range/resolution) 여기를 먼저 본다.
+
+# ── octomap 자체 설정 (2026-08-06 moveit.launch.py에서 이리로 옮김) ──
+# 이전에는 launch가 dict.update()로 이 두 값을 덮어써서 yaml에 적어도 무시됐다.
+# 지금은 setdefault라 **여기 적은 값이 이긴다** (moveit.launch.py:161-166).
+#
+# [튜닝] octomap 복셀 크기(m). 낮출수록 정밀하고 무겁다.
+#   ⚠️ point_subsample과 짝이다. 복셀 하나를 2 m 거리에서도 여러 px이 덮으므로
+#      subsample을 낮춰봐야 지도는 거의 안 변한다(그 파라미터 주석 참조).
+#   ⚠️ 비용 증가폭은 측정으로 정한다. 예전 "3승/8배" 주석은 지웠다 — OctoMap은 조밀 격자가
+#      아니라 옥트리다. 점 개수는 해상도가 아니라 depth 이미지·point_subsample이 정하고,
+#      레이당 통과 복셀 수는 range/res로 선형이다. 실제 비용은 `top -o %CPU`로 잰다.
+# 이력: 0.1 → 0.05 (2026-08-08). 0.1은 RViz 표시를 가볍게 하려고 복셀을 키워둔 값이었는데
+#   되돌리는 걸 잊은 것이다(사용자 확인). 0.1이면 장애물이 10 cm 블록으로 부풀려져
+#   replan(STOP_REPLAN) 정지 트리거가 실제보다 헐겁게 걸린다.
+#   ⚠️ 아직 실기 미검증 — 0.05에서 D435i 노이즈가 허깨비 복셀로 잡힐 수 있다.
+#      `md/plans/2026-08-09-cumotion-verify.md` D절에서 확인한다.
+octomap_resolution: 0.05
+
+# octomap을 어느 프레임에 쌓을지. **반드시 고정 프레임**이어야 한다.
+# 🔴 `world`가 아니라 `base_link`다. SRDF에 virtual_joint(parent_frame="world")가 있어도
+#    MoveIt의 플래닝 프레임은 루트 링크(base_link)로 남는다. world로 주면 장애물이
+#    "Unknown frame: world"로 조용히 무시된다 (2026-08-02 실측, moveit.launch.py 주석 참조).
+octomap_frame: base_link
+
+sensors:
+  - realsense_pointcloud
+
+realsense_pointcloud:
+  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+
+  # camera.launch.py의 RealSense 노드가 pointcloud.enable=true로 발행하는 토픽
+  point_cloud_topic: /camera/camera/depth/color/points
+
+  # [튜닝] 센서 원점에서 이 거리(m)보다 먼 점은 버린다.
+  # ⚠️ 카메라~base 거리보다 작게 잡으면 로봇 베이스 부근이 통째로 안 들어온다.
+  #    현재 거리는 npy에서 읽는다(문서에 적어두면 낡는다):
+  #      python3 -c "import numpy as np; T=np.load('corecode/Calibration_Tutorial/T_cam2base.npy'); \
+  #      print(np.linalg.norm(T[:3,3])/1000, 'm')"
+  # 이력: 2.5 → 1.5(2026-08-03, CPU 절감 목적) → 2.0(2026-08-03 되돌림).
+  #   1.5는 그 시점 실측 거리 1.684 m보다 작아 베이스 부근을 잘라내고 있었고,
+  #   CPU 이득도 체감되지 않았다(사용자 확인). CPU는 여기가 아니라 point_subsample과
+  #   카메라 프로파일에서 줄인다 — 비용은 거리가 아니라 점 개수에 비례한다.
+  # 늘릴 때의 대가: 뒷벽까지 장애물로 잡혀 계획이 막힐 수 있다.
+  max_range: 2.0
+
+  # [튜닝] 점 N개마다 1개만 쓴다. 1=전부. CPU가 모자라면 2~3으로 올린다.
+  # ← CPU를 줄이려면 max_range가 아니라 이 값과 카메라 프로파일이 실효 손잡이다.
+  # ⚠️ UNVERIFIED: 감쇠가 1/N인지 1/N²인지 확인 못 했다. MoveIt이 row/col 양쪽에 stride를
+  #   걸면 3→1은 3배가 아니라 **9배**다. 로컬에 .cpp가 없고(헤더·.so뿐) deb-src도 없어 미확정.
+  #   판정법(실기 떠 있을 때): `ros2 topic echo /moveit/filtered_cloud --field width --once`로
+  #   점 개수를 재서 424x240=101,760 대비 1/3인지 1/9인지 본다. 재면 이 줄을 지운다.
+  #
+  # 이력: 3 유지 (2026-08-05). 한 번 1로 올렸다가 되돌렸다 — 이유 둘:
+  #   ① max_update_rate와 **동시에** 올리면 부하가 곱으로 늘어 원인 분리가 안 된다(한 번에 하나).
+  #   ② 복셀이 커서 이득이 거의 없다. 2 m에서도 2 cm voxel 하나를 약 8 px이 덮는데
+  #      (D435i 87° FOV / 424 px) 지금 해상도는 그보다 크다 → subsample 3에서도 voxel당 점이 남는다.
+  #      지도는 거의 그대로인데 레이캐스트만 3~9배가 된다.
+  #      (2026-08-06 당시 octomap_resolution 0.02 기준으로 쓰인 논증. 지금은 0.05라 더 강해진다)
+  #   "장애물 반영이 느리다"의 손잡이는 아래 max_update_rate 하나다. 여기가 아니다.
+  point_subsample: 4
+  # 🔴 2026-08-11: 이 값은 camera.launch.py 기본 424x240 기준이다. 카메라를 그래스핑용으로
+  #   1280x720까지 올리면(같은 파일 주석 참고) 픽셀 수가 약 9배 늘어난다 — point_subsample도
+  #   같이 올리지 않으면 octomap 부하가 그대로 9배(또는 위 UNVERIFIED 각주대로면 81배)가 된다.
+  #   `ros2 topic echo /moveit/filtered_cloud --field width --once`로 재서 424x240 기준
+  #   width(101,760/subsample)와 같은 비율이 나오도록 맞출 것 — 추정치로 박아넣지 않는다.
+
+  # [튜닝] 로봇 자기 몸을 클라우드에서 지울 때 링크를 얼마나 부풀릴지.
+  # 자기 팔이 장애물로 잡혀 계획이 실패하면 padding_offset을 키운다(단위 m).
+  padding_offset: 0.15
+  padding_scale: 2.5
+
+  # [튜닝] octomap 갱신 주파수(Hz). **RViz에서 체감하는 "장애물 반영 지연"의 상한이 여기다** —
+  # 1.0이면 아무리 CPU/GPU가 남아돌아도 장애물이 최대 1초 늦게 반영된다. 렌더링 성능 문제로
+  # 오진하기 쉬운 자리다(실제로 오진했다, 2026-08-05).
+  # 이력: 1.0 → 5.0 (2026-08-05). **되돌린 게 아니라 새 값이다** — git 이력상 이 값은
+  #   도입 이래 줄곧 1.0이었다. 5.0의 출처는 "카메라 15 fps의 1/3"이라는 판단뿐, 실측 아님.
+  # 이력: 5.0 → 10.0 (2026-08-06, 커밋 5b8d6dd). 커밋에 이유가 안 남아 있다 — 출처 불명.
+  #   ⚠️ 아래 "200 ms 안에"는 5.0 시절 숫자다. 지금 값 10.0이면 **100 ms**가 조건이다.
+  # ⚠️ 이 updater는 **단일 스레드**다(헤더의 octomap::KeyRay key_ray_가 인스턴스 멤버 1개).
+  #   랩탑이 16스레드여도 콜백 하나의 처리 시간은 안 줄어든다. 코어 수는 여기에 안 먹힌다.
+  #   → 진짜 위험은 CPU 굶주림이 아니라 (a) 콜백당 처리시간 증가로 tf2 message_filter 큐
+  #     오버플로("queue is full"), (b) octomap 갱신이 잡는 planning scene 락과 계획 요청의 경합.
+  # ⚠️ max_update_rate는 스케줄러가 아니라 **드롭 필터**다. 15 fps 중 5장 처리하고 10장 버린다.
+  #   "소스보다 낮으니 안전"이 아니라 "200 ms 안에 한 장을 처리 끝낼 수 있느냐"가 실제 조건이다.
+  # ⚠️ 이건 *계획을 시작하는 시점*의 장애물 최신성이지 실기 안전 마진이 아니다.
+  #   MoveIt은 기본적으로 반응형 재계획을 하지 않는다 — 여기를 올려도 **모션 중인 로봇은 안 멈춘다.**
+  # 다음 실기에서 잴 것: 변경 후 `top -o %CPU`의 move_group %, `ros2 topic hz /moveit/filtered_cloud`,
+  #   그리고 로그에 "queue is full"이 뜨는지. 견디면 그때 15.0(=카메라 전속)을 검토한다.
+  max_update_rate: 10.0
+
+  filtered_cloud_topic: /moveit/filtered_cloud

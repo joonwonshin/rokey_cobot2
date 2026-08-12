@@ -3,7 +3,7 @@
 This ws no longer owns any robot/gripper execution -- robot_node.py (its own
 Doosan/gripper control) and wrist_grasp_node.py (GraspGenX precision grasp,
 whose only consumer was robot_node) were removed once cobot2_ws's pick_fsm
-became the sole executor (CLAUDE.md #3). vla_pick_bridge_node is now the only
+became the sole executor (팀 컨벤션 문서 #3). vla_pick_bridge_node is now the only
 thing that turns an agent decision into a motion, by forwarding to pick_fsm
 over /vla/pick_command -- it never moves an arm itself.
 

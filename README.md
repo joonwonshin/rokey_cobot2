@@ -286,4 +286,4 @@ python3 -m pytest src/vla_system/test -q                              # 246 pass
 | [docs/fsm/vla-bridge-contract.md](https://github.com/wodud4143/DooSan_Robotics_VLA_Project/blob/main/docs/fsm/vla-bridge-contract.md) | **경계 계약.** 두 계층을 잇는 JSON 스키마 |
 | [docs/fsm/context/constraints.md](https://github.com/wodud4143/DooSan_Robotics_VLA_Project/blob/main/docs/fsm/context/constraints.md) | **실제 로봇 운용 중 파악한 사실들.** 설계 문서와 다른 부분을 정리했습니다. |
 | [src/PACKAGES.md](https://github.com/wodud4143/DooSan_Robotics_VLA_Project/blob/main/src/PACKAGES.md) | 패키지별 상세 내용 · FSM 상태도 정본 |
-| [docs/fsm/plans/](https://github.com/wodud4143/DooSan_Robotics_VLA_Project/blob/main/docs/fsm/plans) | 통합 작업 인계 문서 |
+| [docs/fsm/README.md](https://github.com/wodud4143/DooSan_Robotics_VLA_Project/blob/main/docs/fsm/README.md) | 로봇 쪽 문서 지도 — 어떤 사실이 어느 문서에 있는지 |

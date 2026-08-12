@@ -184,7 +184,7 @@ world
 > 그 결과로 확정된 레퍼런스(인터페이스·파라미터·배포·증상표)만 남긴다.
 
 
-실행 명령·검증은 [[ws/cobot2/testcommand]]가 단일 출처다. 파이프라인 파라미터(T4~T7 노드 yaml)는
+실행 명령·검증은 테스트 명령 모음가 단일 출처다. 파이프라인 파라미터(T4~T7 노드 yaml)는
 아래 "config 파일 — 작업영역과 노드 파라미터" 절. 여기는 **이 패키지 코드가 왜 이렇게 생겼는지**만 둔다.
 
 | 파일 | 역할 |
@@ -754,7 +754,7 @@ overlay 토픽**을 쓴다(컨테이너 X11에 안 묶이려고).
 ### 실행 환경 — 컨테이너 전용이다
 
 **`yolo_seg_node`는 호스트에서 돌지 않는다.** 호스트 시스템 파이썬에 `ultralytics`/`torch`가
-없다. 넣지도 말 것 — torch가 numpy를 끌어올려 apt `cv_bridge`를 깬다(`~/.claude/CLAUDE.md` §3).
+없다. 넣지도 말 것 — torch가 numpy를 끌어올려 apt `cv_bridge`를 깬다(`팀 컨벤션 문서` §3).
 `grasp_bridge_node`는 반대로 **호스트 전용**이다(GraspGenX 워커를 `uv`로 띄우는데 컨테이너엔
 `uv`가 없다). 한 머신에서 둘 다 띄우면 안 된다 — 자세한 사고 이력은 로그 문서 참고.
 
@@ -856,7 +856,7 @@ pick_default: ''   # 기본 pick 타겟. 비우면 자동(detect 전부 중 점�
 | `pick_fsm.launch.py` | `pick_default` → `task_manager`의 `target` 기본값 | 런치 시 1회. 런타임엔 `/pick/target`이 이긴다 |
 
 - **왜 패키지 안이 아니라 ws 루트인가**: `--symlink-install`이어도 `ament_python` 패키지의
-  share는 `build/` 복사본이라(§CLAUDE.md) 패키지 안 config는 고쳐도 안 먹는다. ws 루트면
+  share는 `build/` 복사본이라(§팀 컨벤션 문서) 패키지 안 config는 고쳐도 안 먹는다. ws 루트면
   **재빌드 없이** 고치고 다시 띄우면 된다. 컨테이너가 ws를 같은 절대경로로 마운트하므로
   호스트의 브리지와 컨테이너의 YOLO가 같은 파일을 본다(2026-08-09 `docker exec`로 확인).
 - **경로 해결**: 런치가 자기 share에서 4단계 위를 되짚는다. `COBOT2_OBJECTS`로 덮어쓸 수
@@ -1020,7 +1020,7 @@ task_manager.py·states.py·ComputeGrasp.srv 의 역참조 4곳은 2026-08-10 �
 
 > **발표용 정리본**: 아래 mermaid는 GitHub/에디터에서 그대로 렌더링되는 원본이다. 색·범례·
 > "push vs pull" 비교도·검증 상태표까지 곁들인 프레젠테이션용 정리본은
-> [cobot2_ws 통합 파이프라인 (아티팩트)](https://claude.ai/code/artifact/7204c2b7-5297-4b18-ab4b-756fa10339fe) 참고.
+> [cobot2_ws 통합 파이프라인 (아티팩트)]((링크 생략) 참고.
 
 ```mermaid
 flowchart TB
@@ -1845,7 +1845,7 @@ VLA PC ──/vla/pick_command(JSON)──▶ vla_command_node ──/get_keywor
 않는다. 승인 경로는 이제 둘: **rqt 패널 '승인' 버튼**(기존) / **음성**(`approve_listener_node`,
 2026-08-10 신설) — 정확히 같은 `/pick/approve` 서비스를 부른다. 기본 승인 문구
 (`승인,그립해,그립,진행해,진행,컨펌`)는 일상 대화에 흔한 "네"/"응"류를 일부러 뺐다(실기
-오작동 방지, `~/.claude/CLAUDE.md` 실기 안전 원칙).
+오작동 방지, `팀 컨벤션 문서` 실기 안전 원칙).
 
 ### `get_keyword` 의 LLM 프롬프트 어휘 — `config/objects.yaml` 이 정본이다 (2026-08-09 수정)
 

@@ -190,7 +190,7 @@ class PerceptionNode(Node):
             )
         # qos_profile_sensor_data (BEST_EFFORT) to match realsense2_camera's
         # own publisher QoS -- RELIABLE here would simply never match it and
-        # the subscription would sit silent with no error (CLAUDE.md's QoS-
+        # the subscription would sit silent with no error (팀 컨벤션 문서's QoS-
         # mismatch trap).
         self.create_subscription(
             Image,

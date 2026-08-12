@@ -25,7 +25,7 @@ owns:    ws 안 모든 런치파일의 인자 지도 · 인자 vs config 파일�
 > - `ament_python` — `pick_fsm`, `cumotion`: share 가 `build/<pkg>/config/` 로의 링크라
 >   **`colcon build` 를 다시 돌려야** src 수정이 넘어간다.
 >
-> CLAUDE.md §4 의 "yaml 은 복사본이다" 규칙은 후자(ament_python)에서 나온 것이다. 앞의
+> 팀 컨벤션 문서 §4 의 "yaml 은 복사본이다" 규칙은 후자(ament_python)에서 나온 것이다. 앞의
 > 두 패키지에 그대로 적용하면 없는 문제를 쫓게 된다.
 
 ---

@@ -1,5 +1,5 @@
 <!-- meta
-owns: 사람·역할·합의·마감. `.claude/commands/dump.md`, `.claude/agents/devils-advocate.md`가 참조한다.
+owns: 사람·역할·합의·마감. `팀 컨벤션 문서`, `팀 리뷰 절차.md`가 참조한다.
 -->
 
 # team

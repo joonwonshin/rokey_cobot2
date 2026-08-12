@@ -5,7 +5,7 @@
     python3 src/graspgenx_perception/test/manual_grasp_to_movel.py
 
 ⚠️ 이 스크립트는 로봇을 움직이지 않는다. 붙여넣을 문자열을 만들 뿐이다.
-   실행은 사람이 판단해서 한다 (~/.claude/CLAUDE.md §0 실기 안전).
+   실행은 사람이 판단해서 한다 (팀 컨벤션 문서 §0 실기 안전).
 
 왜 필요한가 — `/grasp/best*` 와 `move_line` 은 단위·표현이 셋 다 다르다:
     위치   m            -> mm            (x1000)

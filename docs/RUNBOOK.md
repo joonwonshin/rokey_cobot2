@@ -5,7 +5,6 @@
 #   ② GUI 정지 버튼이 2개 — ⏸ 멈춰(되돌림) / 🔴 비상정지(리셋 필요). 말로 "멈춰"는 ①쪽
 #   ③ vla 빌드에서 --packages-select 를 뺐다 (아래 vla터미널 주석 참고)
 #   새 서비스 4개는 맨 아래 "새로 생긴 것" 절.
-#   상세: md/plans/2026-08-12-vlm-fsm-integration-handoff.md
 # ─────────────────────────────────────────────────────────────
 
 rdm
@@ -15,7 +14,7 @@ cdco
 si
 
 # 🔴 코드/yaml 을 받았으면 먼저 빌드한다. yaml 만 고쳐도 재빌드해야 한다
-#    (ament_python 은 share 가 build/ 를 가리켜서 src 수정이 안 넘어간다 — CLAUDE.md §4)
+#    (ament_python 은 share 가 build/ 를 가리켜서 src 수정이 안 넘어간다 — 팀 컨벤션 문서 §4)
 colcon build --symlink-install --packages-select pick_fsm pick_fsm_msgs voice_processing graspgenx_perception
 source install/setup.bash
 

@@ -1,0 +1,45 @@
+# MoveIt uses this configuration for controller management
+
+# [원본] 궤적 실행 설정
+trajectory_execution:
+  allowed_execution_duration_scaling: 1.2
+  allowed_goal_duration_margin: 0.5
+  allowed_start_tolerance: 0.08
+  trajectory_duration_monitoring: true
+
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+# ⚠️ 컨트롤러 이름 앞의 `/dsr01/`은 오타가 아니다.
+# MoveItSimpleControllerManager는 액션 이름을 `<controller_name>/<action_ns>`로 조립한다
+# (action_based_controller_handle.h:204 getActionName). bringup의 controller_manager는
+# `dsr01` 네임스페이스에 있으므로 컨트롤러 액션도 /dsr01/... 아래에 뜬다.
+# 이름을 `dsr_moveit_controller`로 두면 MoveIt은 `/dsr_moveit_controller/...`를 찾아
+# "Action client not connected" → Execute ABORTED가 된다 (2026-08-02 실제로 겪음).
+# 절대경로(`/`로 시작)로 적어야 네임스페이스를 건너뛴다.
+moveit_simple_controller_manager:
+  controller_names:
+    - /dsr01/dsr_moveit_controller   # [원본] M0609 팔 컨트롤러 (ns: dsr01)
+
+  # [원본] M0609 팔 컨트롤러
+  /dsr01/dsr_moveit_controller:
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - joint_1
+      - joint_2
+      - joint_3
+      - joint_4
+      - joint_5
+      - joint_6
+
+  # [추가] RG2 그리퍼 — controller_names에서 뺐다.
+  # 이런 이름의 ros2_control 컨트롤러는 **존재하지 않는다**. RG2는 JointTrajectory가 아니라
+  # `/onrobot/sendCommand` 서비스로 움직인다(bringup의 OnRobotRGControllerServer).
+  # 등록해두면 MoveIt이 매번 붙지 못해 에러만 뱉는다. 그리퍼는 MoveIt 밖에서 제어한다.
+  # rg2_gripper_controller:
+  #   action_ns: follow_joint_trajectory
+  #   type: FollowJointTrajectory
+  #   default: false
+  #   joints:
+  #     - rg2_finger_joint

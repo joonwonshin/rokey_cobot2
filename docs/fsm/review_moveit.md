@@ -9,8 +9,8 @@ owns:    MoveIt2 OMPL+Octomap 수행 기록 · 채택 설정값 스냅샷 · cuR
 **작성:** 2026-08-03 | **대상 스택:** `m0609_rg2_moveit` (MoveIt2 OMPL + `occupancy_map_monitor/PointCloudOctomapUpdater`)
 **목적:** 오늘 수행한 3D octomap 생성→경로계획→회피 과정을 기록해 두고, GPU PC 확보 후 cuRobo와 같은 조건으로 비교할 수 있는 기준선(baseline)을 남긴다.
 
-> 📁 문서 지도: [[ws/cobot2/README]] · 계획서: [[ws/cobot2/plans/2026-08-03-octomap-integration]](이 문서가 그 결과다)
-> · 실측 사실: [[ws/cobot2/context/constraints]] · **이 문서에서 발견된 오류: [[ws/cobot2/errors-log]] §1·2·7·8**
+> 📁 문서 지도: [문서 지도](README.md) · 계획서: 계획 문서(비공개)(이 문서가 그 결과다)
+> · 실측 사실: [실기 제약 문서](context/constraints.md) · **이 문서에서 발견된 오류: 오류 이력 §1·2·7·8**
 
 > ⚠️ 이 문서의 "수행 과정"은 사용자 구두 보고 + 이 세션에서 `git diff`로 확인한 설정 변경을 근거로 재구성했다.
 > `ros2 topic hz` / `tf2_echo` / RViz 스크린샷 등을 **이 턴에서 직접 실행해 확인한 것은 아니므로** 3절에 검증 상태를 분리해 표시한다.
@@ -23,8 +23,8 @@ owns:    MoveIt2 OMPL+Octomap 수행 기록 · 채택 설정값 스냅샷 · cuR
   (이 줄에 처음 적혀 있던 993.4 mm는 좌표 규약 버그 수정 **전**의 값이라 폐기.)
   ⚠️ **여기 적혀 있던 `[1.148, 0.640, 0.678]` (약 1.48 m)는 2026-08-03 재캘리브로 폐기.**
   값의 출처는 `T_cam2base.npy` 하나뿐이다 — **거리 수치를 문서에 베껴 적지 말 것.**
-  읽는 법과 사고 이력은 [[ws/cobot2/context/constraints]].
-- ✅ **`base_0`는 TF에 존재하지 않는 프레임임을 확인** — `base_link`가 맞다. 계획서 전체를 `base_0`→`base_link`, `link6`→`link_6`으로 수정 완료. 근거·표는 [[ws/cobot2/context/constraints]].
+  읽는 법과 사고 이력은 [실기 제약 문서](context/constraints.md).
+- ✅ **`base_0`는 TF에 존재하지 않는 프레임임을 확인** — `base_link`가 맞다. 계획서 전체를 `base_0`→`base_link`, `link6`→`link_6`으로 수정 완료. 근거·표는 [실기 제약 문서](context/constraints.md).
 - ✅ **좌표 규약 버그 수정 후 육안 검증 통과** — 클라우드 속 로봇 팔이 모델에 정확히 포개짐. 캘리브 잠정값 사용 가능.
 - ✅ **`octomap_server`는 이 파이프라인에서 불필요하다고 결론.** MoveIt은 `/octomap_binary`를 구독하지 않고
   `move_group` 내부에서 octree를 직접 만든다. 둘 다 돌리면 CPU 이중 소모 — 정식 경로는 `sensors_3d.yaml`이다.
@@ -35,7 +35,7 @@ owns:    MoveIt2 OMPL+Octomap 수행 기록 · 채택 설정값 스냅샷 · cuR
   ※ 한때 `world`로 적혀 있었으나 **틀렸다**(2026-08-02 실측): SRDF에 `virtual_joint(fixed, parent_frame="world")`가
   있어도 MoveIt은 fixed 타입으로는 모델 프레임을 만들지 않아 플래닝 프레임이 루트 링크(`base_link`)로 남는다.
   `frame_id='world'`로 CollisionObject를 발행하면 `Unknown frame: world` 에러와 함께 **조용히 무시**된다.
-  RViz Scene Objects도 같은 규칙. 경위는 [[ws/cobot2/context/constraints]].
+  RViz Scene Objects도 같은 규칙. 경위는 [실기 제약 문서](context/constraints.md).
 - ✅ **캘리브 결과를 launch가 npy에서 직접 계산** — `m0609_rg2_bringup/config/T_cam2base.npy` →
   `camera.launch.py`가 매 실행 `calib_npy_to_tf.py`로 static TF 생성. **하드코딩된 `static_transform_publisher`
   명령을 다시 만들지 말 것** (낡은 값으로 340 mm 어긋난 이력 있음).
@@ -90,7 +90,7 @@ RealSense (/camera/camera/depth/color/points, pointcloud.enable=true)
 | 파라미터 | 값 | 근거 |
 |---|---|---|
 | `point_cloud_topic` | `/camera/camera/depth/color/points` | RealSense가 직접 발행, `depth_image_proc` 불필요 |
-| `max_range` | **2.0 m** | 2.5 → 1.5(CPU 절감 목적) → **2.0(되돌림)**. 1.5는 카메라~base 실측 **1.684 m**보다 작아 베이스 부근을 잘라내고 있었고, CPU 이득도 체감되지 않았다(사용자 확인). **CPU는 `point_subsample`·카메라 프로파일에서 줄인다** — 비용은 거리가 아니라 점 개수에 비례한다. 경위: [[ws/cobot2/errors-log]] §7 |
+| `max_range` | **2.0 m** | 2.5 → 1.5(CPU 절감 목적) → **2.0(되돌림)**. 1.5는 카메라~base 실측 **1.684 m**보다 작아 베이스 부근을 잘라내고 있었고, CPU 이득도 체감되지 않았다(사용자 확인). **CPU는 `point_subsample`·카메라 프로파일에서 줄인다** — 비용은 거리가 아니라 점 개수에 비례한다. 경위: 오류 이력 §7 |
 | `point_subsample` | **3** | GPU 없는 i7-10510U에서 CPU 부하 축소 (1→3) |
 | `padding_offset` | 0.1 m | self-filter 잔여점 방지 (0.03→0.1 — 자기 팔이 장애물로 잡히는 문제 대응) |
 | `padding_scale` | **2.0** | 위와 같은 목적의 배율 손잡이 (1.0→2.0) |

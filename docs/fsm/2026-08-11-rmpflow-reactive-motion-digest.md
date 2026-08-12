@@ -306,8 +306,8 @@ Setup Assistant가 제외한 쌍들).
 ## 상호참조
 
 - **move_group 실행모델 한계 · SRDF 자기충돌 · 원문 vs 실제 비교**(실기 기록):
-  [[ws/cobot2/context/movegroup_rmpflow_review]]
+  관련 문서
 - **재계획 루프 구현·실행법·`_same_path` 버그**: `src/cumotion/README.md` (⭐절)
 - **nvblox/cuRobo MotionGen 알고리즘·MoveIt vs cuRobo 전역 비교**:
-  [[ws/cobot2/2026-08-07-nvblox-curobo-digest]] — 이 문서의 §4 "전역" 두 칸이 거기 상세히 있다
-- **핸드아이 캘리브·TF·OMPL octomap**: [[ws/cobot2/2026-08-03-notebooklm-digest]]
+  관련 문서 — 이 문서의 §4 "전역" 두 칸이 거기 상세히 있다
+- **핸드아이 캘리브·TF·OMPL octomap**: 관련 문서

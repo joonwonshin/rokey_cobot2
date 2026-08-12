@@ -1,5 +1,5 @@
 <!-- meta
-owns: 답을 모르는 질문. `.claude/commands/dump.md`, `.claude/agents/devils-advocate.md`가 참조한다.
+owns: 답을 모르는 질문. `팀 컨벤션 문서`, `팀 리뷰 절차.md`가 참조한다.
 -->
 
 # unknowns

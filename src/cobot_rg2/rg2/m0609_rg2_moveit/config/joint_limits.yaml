@@ -1,0 +1,73 @@
+# joint_limits.yaml allows the dynamics properties specified in the URDF to be overwritten or augmented as needed
+# Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
+# Joint limits can be turned off with [has_velocity_limits, has_acceleration_limits]
+# For beginners, we downscale velocity and acceleration limits.
+# You can always specify higher scaling factors (<= 1.0) in your motion requests.
+# Increase the values below to 1.0 to always move at maximum speed.
+default_velocity_scaling_factor: 0.5
+default_acceleration_scaling_factor: 0.5
+
+# [튜닝] 충돌 판정에 더할 여유 거리(m). 이 파일 전체가 move_group 의
+# `robot_description_planning` 네임스페이스로 통째로 들어간다 — moveit.launch.py 가
+# 이 두 값을 파이썬에 하드코딩하고 있던 것을 여기로 옮겼다(2026-08-08).
+#   object: scene object(octomap·RViz 장애물)와의 여유. 올리면 더 멀리 돌아간다
+#   robot : 로봇 링크 자기 형상의 여유. 0.0 이면 실측 형상 그대로
+# 근거 심볼: planning_scene_monitor 의 configureDefaultPadding
+# 이 패키지는 ament_cmake + `install(DIRECTORY config)` 라 `--symlink-install` 에서 share 가
+# src 로의 **심볼릭 링크**다 — 고치면 rebuild 없이 반영된다(2026-08-08 `ls -l` 확인).
+# (팀 컨벤션 문서 §4 의 "yaml 은 복사본" 규칙은 ament_python 인 pick_fsm 에서 나온 것이다.)
+default_object_padding: 0.02
+default_robot_padding: 0.0
+
+joint_limits:
+  # [원본] M0609 관절 제한
+  joint_1:
+    has_velocity_limits: true
+    max_velocity: 2.618
+    has_acceleration_limits: true
+    max_acceleration: 2.618
+    min_position: -3.14
+    max_position: 3.14
+  joint_2:
+    has_velocity_limits: true
+    max_velocity: 2.618
+    has_acceleration_limits: true
+    max_acceleration: 2.618
+    min_position: -1.6581
+    max_position: 1.6581
+  joint_3:
+    has_velocity_limits: true
+    max_velocity: 3.14
+    has_acceleration_limits: true
+    max_acceleration: 3.14
+    min_position: -2.1817
+    max_position: 2.1817
+  joint_4:
+    has_velocity_limits: true
+    max_velocity: 3.927
+    has_acceleration_limits: true
+    max_acceleration: 3.927
+    min_position: -3.14
+    max_position: 3.14
+  joint_5:
+    has_velocity_limits: true
+    max_velocity: 3.927
+    has_acceleration_limits: true
+    max_acceleration: 3.927
+    min_position: -2.3562
+    max_position: 2.3562
+  joint_6:
+    has_velocity_limits: true
+    max_velocity: 3.927
+    has_acceleration_limits: true
+    max_acceleration: 3.927
+    min_position: -3.14
+    max_position: 3.14
+
+  # [추가] RG2 그리퍼 관절 제한 (onrobot_rg2.xacro 기준)
+  rg2_finger_joint:
+    has_velocity_limits: true
+    max_velocity: 100.0
+    has_acceleration_limits: false
+    min_position: -0.558505
+    max_position: 0.785398

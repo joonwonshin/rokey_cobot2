@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="m0609_rg2">
+
+  <!-- M0609 URDF include -->
+  <xacro:include filename="$(find dsr_description2)/urdf/m0609.urdf"/>
+
+  <!-- RG2 macro include -->
+  <xacro:include filename="$(find m0609_rg2_bringup)/urdf/onrobot_rg2_model_macro.xacro"/>
+
+  <!-- attaching RG2 Gripper to M0609 tool0 -->
+  <!-- has_bracket=true: 브라켓+퀵커넥터 22mm 실측 반영 (2026-08-07). 이전에는 이 스위치가
+       꺼진 채였고 tool0->rg2_base_link 오프셋이 0으로 취급됐다 (md/context/constraints.md) -->
+  <xacro:onrobot_rg2 prefix="rg2_" effector_base="tool0" has_bracket="true"/>
+
+</robot>

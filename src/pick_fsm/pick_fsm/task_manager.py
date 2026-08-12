@@ -1370,7 +1370,7 @@ class TaskManager(Node):
         """(스캐폴드) pre-grasp 도착 후 eye-in-hand 로 재-graspgenx 하고 사람이 승인하는 자리.
 
         🔴 2026-08-11 스캐폴드다 — 손목 eye-in-hand RealSense 는 아직 없다(constraints.md,
-        CLAUDE.md 2절). 지금은 **실제 재촬영·재계산을 하지 않는다**: 상태 플럼빙과 승인
+        팀 컨벤션 문서 2절). 지금은 **실제 재촬영·재계산을 하지 않는다**: 상태 플럼빙과 승인
         재사용(`/pick/approve`, rqt '승인')만 실물이고, 카메라/graspgenx 호출부는 아래
         HOOK 자리에 비워 둔다. 카메라가 붙고 flange->camera extrinsic(TF)이 생기면 HOOK 에서
         (1) eye-in-hand 프레임 촬영 (2) graspgenx 재호출 (3) 결과를 base_frame 으로 변환해

@@ -1,0 +1,36 @@
+# OnRobot RG2 드라이버(OnRobotRGControllerServer) 파라미터.
+#
+# bringup.launch.py / bringup_camera.launch.py 두 곳에 같은 값이 하드코딩돼 있던 것을
+# 여기로 모았다 (2026-08-08). 값 자체는 원래 런치에 있던 것과 동일하다 — 옮기기만 했다.
+#
+# 이 파일은 mode:=real 일 때만 로드된다 (virtual 은 gripper_virtual_node 가 대신한다).
+#
+# ⚠️ 파라미터 이름의 맨 앞 `/` 는 오타가 아니다. 드라이버가 그렇게 선언한다
+#    (`OnRobotRGControllerServer.py:105,110,176`). rcl YAML 파서가 이 이름을 받는지,
+#    그리고 아래 최상위 키로 override 가 실제로 적용되는지 2026-08-08 노드를 띄워 확인했다.
+# ⚠️ 최상위 키는 런치의 `name=` 과 같아야 한다. 드라이버 `main()` 은 자기 이름을
+#    `OnRobotRGController` 로 만들지만 런치의 `name=` 이 `__node:=` remap 을 걸고
+#    rcl 은 **remap 후 이름**으로 params 를 찾는다. 런치의 name 을 바꾸면 여기도 바꾼다.
+OnRobotRGControllerServer:
+  ros__parameters:
+    # 🔴 유효값은 `modbus` 와 `isaac` 둘뿐이다 (`OnRobotRGControllerServer.py:84,86` match/case).
+    #    드라이버 **기본값은 `tcp`** 인데 그런 case 가 없어서, 이 파라미터가 안 먹으면
+    #    기본값으로 조용히 뜨는 게 아니라 `self.gripper` 미할당 → `:89` AttributeError 로 죽는다.
+    #    즉 파라미터 전달 실패는 시끄럽게 실패한다(그건 다행이다).
+    /onrobot/control: modbus
+    /onrobot/ip: 192.168.1.1        # RG2 Compute Box IP. 로봇(192.168.1.100)과 다른 장비다
+    /onrobot/port: 502              # Modbus/TCP
+    /onrobot/changer_addr: 65       # Quick Changer Modbus 슬레이브 주소
+    /onrobot/gripper: rg2           # rg2 | rg6. 최대 개구·힘 한계가 달라진다
+    # 🔴 이 값은 **modbus 경로에서 아무 효과가 없다** (2026-08-08 코드 추적으로 확인).
+    #    ① `OnRobotRGControllerServer.py:110,112` 에서 선언·조회한 뒤 그 파일에서 다시 안 쓰인다
+    #       (base 클래스로 전달되지도 않는다).
+    #    ② `comModbusTcp.sendCommand` 가 레지스터에 쓰는 건 [force, width, command_type] 셋뿐이다.
+    #    ③ base 쪽 `self.offset` 은 장비가 보고하는 `gfof`(레지스터 258 **읽기**)로
+    #       매 상태갱신마다 덮인다 — 즉 하드웨어가 정본이고 이 값은 초기 씨앗일 뿐이다.
+    #    ④ 실제로 `.offset` 을 쓰는 건 dummy 시뮬(`_baseOnRobotRG.py` fakeSystem) 과
+    #       `comIsaacSim.py` 뿐이다.
+    #    원래 런치에 있던 값이라 동작을 바꾸지 않으려고 남겨둔다. **여기를 튜닝하지 말 것** —
+    #    이 ws 에서 손끝 길이의 정본은 `pick_fsm/pick_fsm/rg2.py` 의 실측 보정표
+    #    (`fingertip_length_m()`, 닫힘 0.240 m)다.
+    /onrobot/offset: 5

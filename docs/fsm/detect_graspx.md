@@ -370,7 +370,7 @@ eye-to-hand AX=XB에서 TCP 오프셋은 `A_i` 계산에서 소거되므로 **`:
       ② `/grasp/best` 응답에 `width_m` 필드 추가 (지금은 `PoseStamped`뿐이라 폭이 어디에도 안 남는다)
       ③ `OnRobotRGOutput` 퍼블리시 — 지금 `grasp_bridge_node.py`에 그리퍼 관련 코드가 0줄이다
       (드라이버 쪽 `rgfr`/`rgwd` 송신·상태 피드백은 `OnRobotRGControllerServer.py`에 이미 있다 — §5-4).
-      [[ws/cobot2/state]] "0-c"가 이 항목을 가리킨다.
+      프로젝트 상태 기록 "0-c"가 이 항목을 가리킨다.
 
 ---
 

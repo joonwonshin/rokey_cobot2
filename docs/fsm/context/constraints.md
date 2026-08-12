@@ -6,7 +6,7 @@ owns:    실기·현장에서 확인된 사실 (하드웨어, TF, MoveIt, QoS, �
 
 # 실기/현장 제약 (실측 사실만 기록. 추측 금지)
 
-> 📁 문서 지도: [[ws/cobot2/README]] · 현재 상태: [[ws/cobot2/state]] · 오류 이력: [[ws/cobot2/errors-log]]
+> 📁 문서 지도: 문서 지도 · 현재 상태: 프로젝트 상태 기록 · 오류 이력: 오류 이력
 > **이 문서가 소유하는 것: "무엇이 참인가".** 지금 뭘 할지는 `state.md`, 틀린 이력은 `errors-log.md`.
 > 튜닝값은 **파일이 정본이다**(`sensors_3d.yaml` 등) — 여기 표는 변경 이력이지 현재값 조회용이 아니다.
 
@@ -25,7 +25,7 @@ owns:    실기·현장에서 확인된 사실 (하드웨어, TF, MoveIt, QoS, �
 - `align_depth.enable:=true`일 때 `aligned_depth_to_color`의 해상도는 **depth가 아니라 color 프로파일을 따른다.** 대역폭 계산 시 주의.
 
 ## RealSense D435I (2026-08-01)
-- ⚠️ **`reals` alias가 2026-08-03 기준 `ros2 launch m0609_rg2_bringup camera.launch.py`로 바뀌었다**(사용자 확인). 아래 08-01 기록의 `rs_align_depth_launch.py` 설명은 **낡았다** — 이 낡은 줄을 근거로 공식 런치를 써서 `base_link→camera_link` 없는 bag 4.8GB를 찍은 사고가 있었다([[ws/cobot2/rosbag-d435i]] §4). 두 런치는 **다른 것을 준다**: ws 런치만 `camera_calib_tf`(캘리브 TF)와 IMU를 준다.
+- ⚠️ **`reals` alias가 2026-08-03 기준 `ros2 launch m0609_rg2_bringup camera.launch.py`로 바뀌었다**(사용자 확인). 아래 08-01 기록의 `rs_align_depth_launch.py` 설명은 **낡았다** — 이 낡은 줄을 근거로 공식 런치를 써서 `base_link→camera_link` 없는 bag 4.8GB를 찍은 사고가 있었다(rosbag 문서 §4). 두 런치는 **다른 것을 준다**: ws 런치만 `camera_calib_tf`(캘리브 TF)와 IMU를 준다.
 - (2026-08-01, 구 alias 기준) `rs_align_depth_launch.py` + `align_depth.enable:=true enable_rgbd:=true pointcloud.enable:=true`, depth 848x480x30 / color 1280x720x30 조합은 **ROS_DOMAIN_ID를 지정하지 않으므로 기본값(비어있음 → 0)에서 뜬다.** 현 alias도 도메인을 지정하지 않는 건 동일.
 - `.bashrc`의 `rdm` alias는 `ROS_DOMAIN_ID=93`을 설정한다. 카메라(도메인 0)와 rqt/다른 터미널(도메인 93)이 섞이면 rqt에 토픽이 전혀 안 보인다 — 실측으로 확인(도메인 93에서 `ros2 topic list`는 `/parameter_events`, `/rosout`만 나옴).
 - CPU는 병목이 아님: `align_depth+enable_rgbd+pointcloud` 동시 실행 중에도 `load average 0.5~0.6`, realsense 노드 CPU 18.8%. 그런데도 `/camera/camera/color/image_raw`, `/rgbd`, `/depth/color/points`의 `ros2 topic hz`가 최소 간격(~0.031~0.033s, 30fps대)은 정상이면서 가끔 0.2~0.3s까지 벌어져 누적 평균이 계속 떨어짐 — USB/드라이버 쪽 간헐적 프레임 드롭으로 추정(미검증, CPU 원인은 배제됨).
@@ -208,7 +208,7 @@ ros2 run m0609_rg2_bringup calib_npy_to_tf.py corecode/Calibration_Tutorial/T_ca
 
 **"GPU 없음"을 근거로 내려진 결정 중 재검토 대상 — 다만 항목마다 근거가 다르다:**
 - nvblox / FoundationPose / GraspGenX / cuMotion / cuRobo 제외
-  ([[ws/cobot2/M0609_perception_motion_sprint_plan]] 3절·438행) → **GPU가 진짜 전제였으므로 무효.**
+  (관련 문서 3절·438행) → **GPU가 진짜 전제였으므로 무효.**
   단 위 표대로 torch·curobo가 아직 없어 "가능해졌다"이지 "준비됐다"가 아니다.
 - `camera.launch.py`의 `424x240x15` 기본값 → 주석 근거가 거짓이므로 재검토 대상.
 - 🔴 `sensors_3d.yaml`의 `point_subsample: 3`, `max_update_rate: 1.0` → **이건 GPU 근거가 아니었다.**
@@ -226,7 +226,7 @@ ros2 run m0609_rg2_bringup calib_npy_to_tf.py corecode/Calibration_Tutorial/T_ca
 
 ## ✅ cuMotion은 Humble(Isaac ROS 3.2)에 있다 — 2026-08-05 확인
 
-[[ws/cobot2/M0609_perception_motion_sprint_plan]] 229행의 **"cuMotion은 사실상 Jazzy 전용으로
+관련 문서 229행의 **"cuMotion은 사실상 Jazzy 전용으로
 재편되어 Humble 지원이 불확실"은 부정확하다.** `git ls-remote`로 확인한 실제 태그:
 
 ```
@@ -250,7 +250,7 @@ isaac_ros_cumotion 태그: … v3.2-12 v3.2-13 v3.2-14 v3.2-15 v3.2.0 v4.0-0 …
 | `isaac_ros_cumotion` | ❌ 아직 클론 안 됨 (다른 3개는 `v3.2-14`로 있음) | 작업 항목 |
 | cuMotion용 로봇 구 모델(XRDF) | ❌ M0609+RG2용은 존재하지 않음 | 🟡 **직접 작성해야 함. 여기가 진짜 일정 리스크다** |
 
-> ⚠️ 위 🔴 두 개는 **팀 공유 랩탑의 시스템 전역 변경**이다(`~/.claude/CLAUDE.md` 5절 —
+> ⚠️ 위 🔴 두 개는 **팀 공유 랩탑의 시스템 전역 변경**이다(`팀 컨벤션 문서` 5절 —
 > 다른 계정이 의존하는 자원은 임의로 건드리지 않는다). 팀 합의 후 사용자가 직접 실행할 것.
 
 > `/home/rokey/`는 `drwxr-x---`로 **권한 거부**라 그 계정의 curobo를 참고할 수 없다(2026-08-05 확인).
@@ -290,7 +290,7 @@ world_objects = scene.world.collision_objects        # ← collision_objects "�
    사람 팔을 통과하는 궤적이 나와도 로그로는 안 드러난다.
    → **nvblox 없이 cuMotion으로 사람 팔 실기를 돌리지 않는다.**
 
-관련: [[ws/cobot2/plans/2026-08-05-cumotion-bringup]] §4-3
+관련: 계획 문서(비공개) §4-3
 
 ---
 
@@ -414,7 +414,7 @@ ImportError: numpy.core.multiarray failed to import
 - ⚠️ **대가**: `cupy-cuda12x`가 numpy≥2.0을 요구해서 깨진다. 우리 파이프라인에서 cupy를 쓰는 건
   `isaac_ros_cumotion_object_attachment`뿐이고(전수 grep) 그 노드는 안 띄우므로 무해하다.
   **object_attachment를 쓰게 되면 이 결정을 다시 봐야 한다.**
-- ⚠️ **`.claude/hooks/guard.sh:13`이 이 조치를 오탐으로 막는다.** 패턴 `numpy[=><]*2`가
+- ⚠️ **`저장소 훅:13`이 이 조치를 오탐으로 막는다.** 패턴 `numpy[=><]*2`가
   `numpy<2`에도 걸린다 — 금지하려던 건 `>=2`인데 **해결책까지 차단한다.**
   지금은 `numpy==1.26.4`처럼 명시 핀으로 우회한다.
 
@@ -654,7 +654,7 @@ roll이 여전히 ±90° 근처면 경고를 찍는다.
 ## MoveIt octomap 실기 Execute (2026-08-03, 사용자 구두 보고 — 정량 미측정)
 - 실기 Execute까지 진행해 장애물 회피 확인. 단 **캘리브 오차로 장애물 영역 경계가 모호하게 잡혔다** — 그래도 무시되지는 않고 회피는 수행됨.
 - 오차 정량값(cm)은 아직 안 잼. `padding_offset:0.1`(현재값)이 오차를 흡수해서 완전히 안 지워지고 모호하게만 잡힌 것으로 보이나 **이건 추론**이다. 실측은 알려진 좌표 물체로 다음 세션에.
-- 상세 리뷰·cuRobo 비교 설계는 [[ws/cobot2/review_moveit]].
+- 상세 리뷰·cuRobo 비교 설계는 MoveIt 검토 문서.
 
 ## MoveIt octomap 연동 (2026-08-02)
 
@@ -1033,7 +1033,7 @@ corecode/.../T_cam2base.npy  (정본)
 ## GraspGenX 관련
 
 > **이 절이 소유하는 건 실측 사실(체크포인트 sha256, VRAM 측정치)뿐이다.**
-> 출력 규약·폭 계산 함수·상류 버그·설계 결정은 [[ws/cobot2/detect_graspx]]가 단일 출처다 — 여기 옮겨 적지 않는다.
+> 출력 규약·폭 계산 함수·상류 버그·설계 결정은 GraspGenX 설계 문서가 단일 출처다 — 여기 옮겨 적지 않는다.
 
 - **LFS 포인터 문제는 로컬 체크아웃 한정.** Lightning AI 원격에서는 RG2 데모 정상 동작(2026-08-04).
   로컬에서 메시 로드/시각화할 때만 `git lfs pull` 필요.
@@ -1240,7 +1240,7 @@ GraspGenX **자체 loader**를 통과시켜 확인했다
 ## nvblox / DDS — 대여 GPU와 무관한 보편 사실 (2026-08-04 실측, `gpu-rental-checklist.md` §8에서 이관)
 
 > 아래 4가지는 **어느 머신에서 nvblox를 돌리든 재현되는 소프트웨어 속성**이라 여기로 옮겼다.
-> 대여 절차·밟은 지뢰 목록·확정 명령어 자체는 여전히 [[ws/cobot2/plans/2026-08-04-gpu-rental-checklist]] §1~§7이 단일 출처다.
+> 대여 절차·밟은 지뢰 목록·확정 명령어 자체는 여전히 계획 문서(비공개) §1~§7이 단일 출처다.
 
 - **Fast DDS가 848×480 depth(814 KB/샘플)를 못 흘린다.** 14~15 Hz여야 할 게 0.2~0.7 Hz로 떨어진다 —
   `camera_info`(작은 메시지)는 같은 bag에서 14 Hz로 멀쩡해 **메시지 크기 의존**이 지문이다.
@@ -1263,7 +1263,7 @@ GraspGenX **자체 loader**를 통과시켜 확인했다
 
 ## Isaac ROS 컨테이너 (Lightning AI / AWS EC2 GPU)
 
-> 📤 **2026-08-04에 [[ws/cobot2/plans/2026-08-04-gpu-rental-checklist]]로 전부 옮겼다.**
+> 📤 **2026-08-04에 계획 문서(비공개)로 전부 옮겼다.**
 > 대여 GPU(클라우드) 환경의 사실은 **실기 제약이 아니다** — 이 문서는 로컬 실물 하드웨어만 소유한다.
 > Foxglove, FoundationPose 걸림돌은 그쪽 §6~§8에 있다. nvblox/DDS 보편 사실은 위 절로 옮겼다.
 

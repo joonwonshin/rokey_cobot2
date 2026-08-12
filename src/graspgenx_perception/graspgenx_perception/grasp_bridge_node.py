@@ -87,7 +87,7 @@ EXTRA_DEFAULTS = {
     'target': '',               # 비우면 점수 최고 물체. 라벨 이름(obj_2)으로 고른다
     # **클래스 이름**으로 대상을 좁힌다 (예: 'apple' 또는 'apple,cup'). 비우면 전부.
     # 리스트가 아니라 콤마 문자열인 이유: rcl YAML 파서가 리스트 안 타입 혼합·빈 리스트에서
-    # 죽는 사례를 이 ws 에서 반복해 밟았다(CLAUDE.md §4). 문자열은 그 함정이 없다.
+    # 죽는 사례를 이 ws 에서 반복해 밟았다(팀 컨벤션 문서 §4). 문자열은 그 함정이 없다.
     # seg_source='yolo' 전용 — geometric 경로는 클래스를 모른다.
     # `ros2 param set` 으로 런타임 변경이 먹는다. extra() 가 compute() 마다 다시 읽는다
     # (yolo_seg_node 의 classes 와 다른 점이다. 그쪽은 __init__ 에서 한 번만 읽는다).

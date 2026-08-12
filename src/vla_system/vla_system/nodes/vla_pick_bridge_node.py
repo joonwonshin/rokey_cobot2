@@ -3,14 +3,14 @@
 
 This node is the only executor left in this ws (``robot_node.py`` and its own
 Doosan/gripper control were removed -- cobot2_ws's ``pick_fsm`` is the sole
-robot/gripper owner now, CLAUDE.md #3). It subscribes ``/vla/robot/action``/
+robot/gripper owner now, 팀 컨벤션 문서 #3). It subscribes ``/vla/robot/action``/
 ``/vla/robot/stop``/``/vla/estop`` and publishes ``/vla/robot/state``, and
 forwards to a *different process in a different git clone* (``~/cobot2_ws``'s
 ``vla_command_node``) over ``/vla/pick_command`` / ``/vla/pick_result``
 (``std_msgs/String``, JSON). See ``docs/state.md`` "cobot2_ws 통합" for the
 full checklist this implements, and ``~/cobot2_ws/md/vla-bridge-contract.md``
 for the schema this node is bound by (not copied here on purpose --
-CLAUDE.md #2).
+팀 컨벤션 문서 #2).
 
 What this node deliberately does not do:
 

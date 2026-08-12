@@ -35,7 +35,7 @@ if [ "$HAVE_NUMPY" = "$WANT_NUMPY" ]; then
   echo "  OK  numpy $HAVE_NUMPY"
 else
   echo "  $HAVE_NUMPY → $WANT_NUMPY 설치 중..."
-  # ⚠️ "numpy<2"로 쓰면 .claude/hooks/guard.sh 가 오탐으로 막는다. 명시 핀을 쓴다
+  # ⚠️ "numpy<2"로 쓰면 저장소 훅 가 오탐으로 막는다. 명시 핀을 쓴다
   pip3 install "numpy==${WANT_NUMPY}" 2>&1 | tail -1
 fi
 python3 -c 'import cv2; print("  cv2", cv2.__version__, "OK")' 2>&1 | tail -1
