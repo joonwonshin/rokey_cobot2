@@ -1,0 +1,95 @@
+# cumotion_planner.yaml — T6: cumotion_planner_node (GPU 모션 플래너)
+#
+# 이 노드가 하는 일: MoveIt의 /cumotion/move_group 액션을 받아 cuRobo로 궤적을 만든다.
+# 장애물은 **nvblox ESDF를 서비스로 당겨서** 가져온다 (octomap은 아예 안 본다).
+#
+# 사용 (T6, 컨테이너):
+#   cd /workspaces/isaac_ros-dev
+#   ros2 run isaac_ros_cumotion cumotion_planner_node --ros-args \
+#     --params-file /workspaces/cobot2_ws_new/config/cumotion_planner.yaml
+#
+# 근거 소스: isaac_ros_cumotion/isaac_ros_cumotion/isaac_ros_cumotion/cumotion_planner.py:62-95
+# 노드 이름은 'cumotion_action_server'. /**: 로 받으므로 이름과 무관하게 적용된다.
+
+/**:
+  ros__parameters:
+    # ───────── 로봇 모델 ─────────
+    # 🔴 cumotion_segmenter.yaml 과 같은 XRDF여야 한다 (지우는 몸 = 충돌검사하는 몸).
+    robot: "m0609_rg2.xrdf"
+    urdf_path: "/workspaces/isaac_ros-dev/m0609/m0609_kinematics.urdf"
+
+    # ───────── 장애물 입력 ─────────
+    # 🔴 read_esdf_world: False 로 띄우면 장애물을 못 본다. 그런데 **계획은 성공한다** —
+    #    그래서 위험하다. "계획은 되는데 장애물을 통과"하면 제일 먼저 여기를 본다.
+    read_esdf_world: true
+    esdf_service_name: "/nvblox_node/get_esdf_and_gradient"
+    # true: 계획 요청마다 nvblox에게 ESDF를 새로 계산시킨다(최신성 ↑, 계획시간 ↑).
+    # ⚠️ "계속 갱신"이 아니다. 갱신은 **계획 요청 1회당 1번**이다(cumotion_planner.py:621).
+    #    실행 중에는 지도가 안 바뀐다 = 궤적 실행 중 동적 회피는 이 노드로는 안 된다.
+    update_esdf_on_request: true
+    use_aabb_on_request: true          # 아래 상자만 잘라 받는다(전체 지도를 안 받는다)
+
+    # ───────── 🔴 감시상자 — nvblox_realtime.yaml 과 반드시 일치시킬 것 ─────────
+    # cuRobo는 이 상자 **밖을 자유공간으로 취급**한다. 상자를 벗어난 장애물은 통과한다.
+    #
+    #   작업영역(사용자 지정)  x  0.00 ~ 0.70 | y -0.30 ~ 0.30
+    #   감시상자(작업+0.2 여유) x -0.20 ~ 0.90 | y -0.50 ~ 0.50 | z -0.05 ~ 0.70
+    #
+    # grid_center_m = 상자 중심, grid_size_m = 상자 크기. min corner = center - size/2.
+    #   x: 0.35 - 1.10/2 = -0.20 ✓      z: 0.325 - 0.75/2 = -0.05 ✓
+    # 복셀 개수 22 × 20 × 15 = 6,600 (기본 2×2×2 m 상자의 64,000 대비 10%)
+    #
+    # ⚠️ 상자를 바꿀 때 지켜야 할 것:
+    #    ① grid_size_m 각 성분은 voxel_size(0.05)의 정수배 — 아니면 그리드 shape이 어긋나
+    #       cumotion_planner.py:432 에서 FATAL로 죽는다.
+    #    ② nvblox_realtime.yaml 의 workspace_bounds_* 를 **같은 값으로** 고친다.
+    #    ③ nvblox 의 projective_integrator_max_integration_distance_m 이 카메라에서
+    #       상자 먼 모서리까지의 거리(현재 1.812 m)를 덮는지 확인한다.
+    grid_center_m: [0.35, 0.0, 0.325]
+    grid_size_m:   [1.10, 1.0, 0.75]
+
+    # 🔴 nvblox_realtime.yaml 의 voxel_size 와 반드시 동일. 다르면 FATAL(cumotion_planner.py:410).
+    voxel_size: 0.05
+
+    # 코드가 기본으로 넣는 2×2×0.1 m 테이블 큐브. false면 그걸 지우고 **복셀만** 믿는다.
+    # 우리는 감시상자가 z=-0.05까지 내려가 실제 테이블 상판을 복셀로 잡으므로 false가 맞다.
+    # ⚠️ 단, 상판이 카메라에 안 보이는 각도면 테이블이 통째로 사라진다. 그때는 MoveIt
+    #    planning scene에 상자를 놓는 쪽이 낫다(여기를 true로 켜면 위치가 원점 고정이라 안 맞는다).
+    add_ground_plane: false
+
+    # ───────── 계획 품질 ↔ 시간 ─────────
+    # 실패가 잦으면 max_attempts / num_trajopt_seeds 를 올린다. 계획시간이 그만큼 는다.
+    # 2026-08-06 실측 기준선: cuMotion 서버 110.6 ms / 성공 10/10 (기본값, 장애물 없는 관절목표).
+    max_attempts: 10
+    num_graph_seeds: 6
+    num_trajopt_seeds: 6
+    include_trajopt_retract_seed: true
+    num_trajopt_time_steps: 32
+    trajopt_finetune_iters: 400
+    interpolation_dt: 0.025
+    collision_cache_mesh: 20
+    collision_cache_cuboid: 20
+
+    # 궤적을 얼마나 느리게 펼칠지 (1.0 = 최고속). MoveIt이 보낸 velocity/accel scaling이
+    # 유효하면 그쪽이 이기고, 아래 값은 override_moveit_scaling_factors: true 일 때만 강제된다.
+    # ⚠️ 실기 첫 실행은 0.2~0.3으로 낮춰서 본다. 여기는 **로봇이 실제로 움직이는 속도**다.
+    time_dilation_factor: 0.5
+    override_moveit_scaling_factors: false
+
+    # ───────── 입출력 ─────────
+    joint_states_topic: "/joint_states"
+    # 🔴 /joint_states 의 velocity가 비어 있으면 계획이 전부 실패한다.
+    #    bringup.launch.py 의 publish_default_velocities: True 가 그 대책(커밋됨).
+
+    # /curobo/voxels 로 "cuMotion이 실제로 쥔 장애물"을 발행한다. 디버깅의 핵심 토픽이다.
+    # ⚠️ 구독자가 있고, 계획을 한 번 돌려야 나온다. 대기 중 topic hz로 판정하지 말 것.
+    publish_curobo_world_as_voxels: true
+    publish_voxel_size: 0.05           # 시각화 전용. 계획에는 영향 없다
+    max_publish_voxels: 100000
+
+    # workspace_file_path 를 주면 grid_center_m/grid_size_m 대신 그 파일의 코너값을 쓴다.
+    # 비워두면(현재) 위 grid_* 파라미터가 쓰인다.
+    workspace_file_path: ""
+
+    enable_curobo_debug_mode: false     # true면 cuRobo 로그가 info까지 나온다
+    update_link_sphere_server: "planner_attach_object"

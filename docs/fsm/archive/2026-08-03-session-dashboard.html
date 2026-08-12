@@ -1,0 +1,564 @@
+<head>
+  <meta charset="UTF-8">
+</head>
+<title>2026-08-03 세션 성과 요약 — M0609 캘리브·TF·Octomap</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --plane:          #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --muted:          #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6;   /* blue  — 측정값 */
+    --series-1-soft:  #9ec5f4;   /* blue 200 — before / 트랙 */
+    --series-2:       #eb6834;   /* orange — 보조 계열 */
+    --deemph:         #d8d7d1;
+    --good:           #0ca30c;
+    --warning:        #fab219;
+    --critical:       #d03b3b;
+    --good-text:      #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --plane:          #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted:          #898781;
+      --grid:           #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1:       #3987e5;
+      --series-1-soft:  #1c5cab;
+      --series-2:       #d95926;
+      --deemph:         #3a3a37;
+      --good-text:      #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --plane:          #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted:          #898781;
+    --grid:           #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --series-1:       #3987e5;
+    --series-1-soft:  #1c5cab;
+    --series-2:       #d95926;
+    --deemph:         #3a3a37;
+    --good-text:      #0ca30c;
+  }
+
+  .viz-root {
+    background: var(--plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.55;
+    padding: 32px 20px 64px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .sub { color: var(--text-secondary); font-size: .92rem; margin: 0 0 28px; }
+  h2 { font-size: 1.02rem; font-weight: 600; margin: 0 0 2px; }
+  .note { color: var(--text-secondary); font-size: .82rem; margin: 0 0 18px; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px,1fr)); gap: 16px; margin-bottom: 16px; }
+  .grid2 .card { margin: 0; }
+
+  /* hero */
+  .hero { display:flex; flex-wrap:wrap; align-items:baseline; gap:16px; }
+  .hero .fig { font-size: 3.4rem; font-weight: 640; letter-spacing: -0.03em; line-height:1; }
+  .hero .cap { color: var(--text-secondary); font-size: .92rem; max-width: 46ch; }
+
+  /* kpi */
+  .kpis { display:grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-bottom:16px; }
+  .kpi .lab { color: var(--text-secondary); font-size:.8rem; }
+  .kpi .val { font-size:1.9rem; font-weight:620; letter-spacing:-0.02em; margin:4px 0 2px; }
+  .kpi .val .u { font-size:.95rem; font-weight:500; color: var(--text-secondary); margin-left:3px; }
+  .kpi .delta { font-size:.78rem; color: var(--text-secondary); display:flex; align-items:center; gap:5px; }
+  .dot { width:9px; height:9px; border-radius:50%; flex:none; }
+
+  /* charts */
+  .rows { display:flex; flex-direction:column; gap:12px; }
+  .row { display:grid; grid-template-columns: minmax(90px, 180px) 1fr; gap:12px; align-items:center; }
+  .row .k { font-size:.82rem; color: var(--text-secondary); }
+  .track { position:relative; height:24px; display:flex; align-items:center; }
+  .bar { height:20px; border-radius:0 4px 4px 0; background: var(--series-1); min-width:2px; }
+  .bar.soft { background: var(--series-1-soft); }
+  .bar.gray { background: var(--deemph); }
+  .bar.bad  { background: var(--critical); }
+  .val { font-size:.82rem; color: var(--text-primary); margin-left:8px; white-space:nowrap; font-variant-numeric: tabular-nums; }
+  .val .sm { color: var(--text-secondary); }
+  .thresh { position:absolute; top:-6px; bottom:-6px; width:1px; background: var(--baseline); }
+  .thresh::after {
+    content: attr(data-label); position:absolute; left:6px; top:-16px;
+    font-size:.72rem; color: var(--muted); white-space:nowrap;
+  }
+  .axis { border-top:1px solid var(--grid); margin-top:10px; padding-top:5px;
+          display:flex; justify-content:space-between; font-size:.72rem; color: var(--muted);
+          font-variant-numeric: tabular-nums; }
+  .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:.8rem; color: var(--text-secondary); margin-bottom:14px; }
+  .legend span { display:flex; align-items:center; gap:6px; }
+
+  /* dumbbell */
+  .dumb { position:relative; height:40px; margin: 6px 0 2px; }
+  .dumb .line { position:absolute; top:19px; height:2px; background: var(--series-1-soft); }
+  .dumb .pt { position:absolute; top:12px; width:16px; height:16px; border-radius:50%;
+              box-shadow: 0 0 0 2px var(--surface-1); transform: translateX(-8px); }
+
+  table { border-collapse: collapse; width:100%; font-size:.84rem; }
+  .scroll { overflow-x:auto; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }
+  th { color: var(--muted); font-weight:600; font-size:.76rem; }
+  td.num { font-variant-numeric: tabular-nums; }
+  td.why { white-space:normal; color: var(--text-secondary); }
+
+  /* 코드 수정 이력 */
+  .fhead { display:flex; flex-wrap:wrap; align-items:baseline; gap:10px; margin-bottom:2px; }
+  .fhead code { font-size:.95rem; font-weight:600; color: var(--text-primary); }
+  .stat { font-size:.76rem; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+  .stat .add { color: var(--good-text); font-weight:600; }
+  .stat .del { color: var(--critical); font-weight:600; }
+  .chg { display:flex; flex-direction:column; gap:12px; margin-top:14px; }
+  .chg-item { border-left:2px solid var(--series-1); padding-left:14px; }
+  .chg-item.risk { border-left-color: var(--series-2); }
+  .chg-item .t { font-size:.87rem; font-weight:600; }
+  .chg-item .was, .chg-item .now { font-size:.82rem; display:flex; gap:8px; align-items:baseline; margin-top:3px; }
+  .chg-item .was { color: var(--muted); }
+  .chg-item .now { color: var(--text-secondary); }
+  .chg-item .was b, .chg-item .now b { flex:none; font-weight:600; font-size:.72rem; letter-spacing:.04em; width:5.2em; }
+  .chg-item .now b { color: var(--text-primary); }
+  .chg-item .why { font-size:.8rem; color: var(--text-secondary); margin-top:5px; }
+  .chg-item code, .why code, td code { font-size:.92em; background:rgba(128,128,128,.13); padding:1px 5px; border-radius:4px; }
+
+  ul.lessons { margin:0; padding-left:1.1em; font-size:.87rem; color: var(--text-secondary); }
+  ul.lessons li { margin-bottom:7px; }
+  ul.lessons b { color: var(--text-primary); font-weight:600; }
+  details { margin-top:14px; font-size:.82rem; color: var(--text-secondary); }
+  summary { cursor:pointer; color: var(--muted); }
+  .tag { display:inline-flex; align-items:center; gap:5px; font-size:.74rem; color: var(--text-secondary);
+         border:1px solid var(--border); border-radius:999px; padding:2px 9px; }
+  #tip { position:fixed; z-index:99; pointer-events:none; opacity:0; transition:opacity .1s;
+         background: var(--surface-1); color: var(--text-primary); border:1px solid var(--border);
+         border-radius:8px; padding:7px 10px; font-size:.78rem; box-shadow:0 4px 14px rgba(0,0,0,.14); max-width:280px; }
+</style>
+
+<div class="viz-root">
+<div class="wrap">
+
+  <h1>2026-08-03 세션 성과 요약</h1>
+  <p class="sub">M0609 + RG2 + D435i (eye-to-hand) · ROS 2 Humble / MoveIt 2.5.9 · <b>GPU 없는 15W 노트북</b>(i7-10510U, ros2_control_node 상시 CPU 204%)<br>
+  주제: 핸드아이 캘리브레이션 · 좌표 규약 · TF 트리 · MoveIt2 Octomap 충돌회피</p>
+
+  <div class="card hero">
+    <div class="fig">8.0<span style="font-size:1.6rem">×</span></div>
+    <div class="cap"><b>센서 단에서 줄인 포인트 처리량</b> — 848×480×30(12.2 M pt/s)을 424×240×15(1.53 M pt/s)로.
+    GPU 없이 3D 충돌회피가 실제로 도는 유일한 조건이었고, 실기에서 <b>장애물 회피 Plan·Execute 성공</b>까지 확인했다.</div>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi">
+      <div class="lab">캘리브 병진잔차 (중앙값)</div>
+      <div class="val">40.1<span class="u">mm</span></div>
+      <div class="delta"><span class="dot" style="background:var(--critical)"></span>⚠️ 불합격 · 직전 23.5 mm 대비 +71%</div>
+    </div>
+    <div class="card kpi">
+      <div class="lab">좌표규약 채점 최적안</div>
+      <div class="val">32.5<span class="u">°</span></div>
+      <div class="delta"><span class="dot" style="background:var(--good)"></span>✅ 오진 상태 81.0° → 48.5°p 개선</div>
+    </div>
+    <div class="card kpi">
+      <div class="lab">무음 실패 최대 오차</div>
+      <div class="val">480<span class="u">mm</span></div>
+      <div class="delta"><span class="dot" style="background:var(--critical)"></span>⚠️ 에러 없이 정상 동작함</div>
+    </div>
+    <div class="card kpi">
+      <div class="lab">확정한 튜닝 파라미터</div>
+      <div class="val">7<span class="u">개</span></div>
+      <div class="delta"><span class="dot" style="background:var(--series-1)"></span>근거 기록 완료 · 1건 보류</div>
+    </div>
+    <div class="card kpi">
+      <div class="lab">오늘 코드 수정 (08-03)</div>
+      <div class="val">+602<span class="u">/ −90</span></div>
+      <div class="delta"><span class="dot" style="background:var(--series-2)"></span>커밋 2개 · 12파일 + 문서 +718줄</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+
+    <!-- 1. 캘리브 잔차 -->
+    <div class="card">
+      <h2>캘리브 잔차 — 장수를 늘렸는데 나빠졌다</h2>
+      <p class="note">AX=XB 병진잔차 중앙값 (mm, 낮을수록 좋음). 판정선은 octomap voxel 20 mm.</p>
+      <div class="rows" id="c1">
+        <div class="row">
+          <div class="k">직전 수집 · 26장</div>
+          <div class="track" data-tip="26장 · 잔차 중앙값 23.5 mm · 판정: 경계">
+            <div class="bar" style="width:46%"></div><div class="val">23.5</div>
+            <div class="thresh" style="left:39.2%" data-label="20 mm 판정선"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="k">오늘 수집 · 34장</div>
+          <div class="track" data-tip="34장 · 잔차 중앙값 40.1 mm · 31쌍 중 21쌍이 30 mm 초과 · 판정: 불합격">
+            <div class="bar bad" style="width:78.6%"></div><div class="val">40.1 <span class="sm">⚠️ 불합격</span></div>
+            <div class="thresh" style="left:39.2%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="axis"><span>0</span><span>25</span><span>51 mm</span></div>
+      <p class="note" style="margin:14px 0 0"><b>결론</b>: 데이터 <b>양</b>이 아니라 <b>자세 품질</b>의 문제.
+      31쌍 중 21쌍이 30 mm를 넘었다. 잔차가 voxel(20 mm)보다 크면 해상도를 올려도 캘리브가 정밀도를 지배한다.</p>
+    </div>
+
+    <!-- 2. 가설 채점 -->
+    <div class="card">
+      <h2>좌표 규약 — 가설을 숫자로 채점하기</h2>
+      <p class="note">기준: 카메라 시선 벡터가 로봇 base를 향하는 각도(°, 낮을수록 물리적으로 옳다). 채택안만 강조.</p>
+      <div class="rows">
+        <div class="row">
+          <div class="k">T 그대로 · optical ✅</div>
+          <div class="track" data-tip="채택. 남은 32.5°는 카메라가 base 원점이 아니라 그 앞 작업대를 겨냥하기 때문 — 물리적으로 타당">
+            <div class="bar" style="width:40.1%"></div><div class="val">32.5° <span class="sm">채택</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="k">inv(T) · body</div>
+          <div class="track" data-tip="inv(T)로 고쳐도 규약 오류는 안 풀린다">
+            <div class="bar gray" style="width:51.9%"></div><div class="val">42.0°</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="k">inv(T) · optical</div>
+          <div class="track" data-tip="두 손잡이를 동시에 돌린 경우">
+            <div class="bar gray" style="width:64.2%"></div><div class="val">52.0°</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="k">T 그대로 · body (오진)</div>
+          <div class="track" data-tip="클라우드가 로봇 옆으로 90° 튀던 상태. 지문은 발행 TF의 roll ≈ ±90°">
+            <div class="bar gray" style="width:100%"></div><div class="val">81.0° <span class="sm">버그 상태</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="axis"><span>0</span><span>40</span><span>81°</span></div>
+      <p class="note" style="margin:14px 0 0"><b>결론</b>: <code>inv(T)</code> 문제가 아니라 <b>OpenCV optical ↔ ROS body 규약</b> 문제였다.
+      수정은 <code>calib_npy_to_tf.py</code> <b>한 곳에서만</b>, roll이 ±90° 근처면 경고를 찍게 했다.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+
+    <!-- 3. 무음 오차 -->
+    <div class="card">
+      <h2>“조용히” 어긋난 값들 — 전부 에러가 안 난다</h2>
+      <p class="note">틀린 채로 정상 동작한 오차 크기 (mm).</p>
+      <div class="rows">
+        <div class="row">
+          <div class="k">08-03 npy 사본 방치</div>
+          <div class="track" data-tip="재캘리브 후 복사본 갱신을 잊음 → [-184.31, 425.18, -118.45]">
+            <div class="bar" style="width:100%"></div><div class="val">480</div></div>
+        </div>
+        <div class="row">
+          <div class="k">08-02 TF 숫자 하드코딩</div>
+          <div class="track" data-tip="static_transform_publisher 명령에 낡은 숫자를 직접 박음">
+            <div class="bar" style="width:70.8%"></div><div class="val">340</div></div>
+        </div>
+        <div class="row">
+          <div class="k">캘리브 잔차 (오늘)</div>
+          <div class="track" data-tip="AX=XB 병진잔차 중앙값"><div class="bar soft" style="width:8.4%"></div><div class="val">40.1</div></div>
+        </div>
+        <div class="row">
+          <div class="k">octomap voxel</div>
+          <div class="track" data-tip="현재 octomap_resolution 0.02 m — 비교 기준">
+            <div class="bar soft" style="width:4.2%"></div><div class="val">20 <span class="sm">기준</span></div></div>
+        </div>
+      </div>
+      <div class="axis"><span>0</span><span>240</span><span>480 mm</span></div>
+      <p class="note" style="margin:14px 0 0">스케일만 조용히 틀어지는 것도 둘 더 있었다 —
+      <b>내부파라미터 재추정 fx −7.7%</b>(839.78 vs 공장값 909.53), <b>square_size 25/24 = +4.2%</b>(500 mm → 521 mm).
+      → <b>규칙: 생성 위치가 정해진 산출물은 사본을 만들지 않는다. symlink 아니면 경로 참조.</b></p>
+    </div>
+
+    <!-- 4. 대역폭 -->
+    <div class="card">
+      <h2>대역폭 산술이 설계를 지배했다</h2>
+      <p class="note">포인트 생성량 (M point/s). 센서 드라이버 단에서 줄인 값 — throttle은 이미 만든 메시지를 버리는 것이라 생성 비용을 못 줄인다.</p>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--series-1-soft)"></span>변경 전</span>
+        <span><span class="dot" style="background:var(--series-1)"></span>채택값</span>
+      </div>
+      <div style="margin:0 0 4px; font-size:.82rem; color:var(--text-secondary)">depth/color 프로파일</div>
+      <div class="dumb" data-tip="848×480×30 = 12.2 M pt/s → 424×240×15 = 1.53 M pt/s (8.0× 감축)">
+        <div class="line" style="left:12.5%; right:0"></div>
+        <div class="pt" style="left:12.5%; background:var(--series-1)"></div>
+        <div class="pt" style="left:100%; background:var(--series-1-soft)"></div>
+        <div style="position:absolute; left:12.5%; top:-2px; transform:translateX(-8px); font-size:.78rem">
+          <span style="position:absolute; top:34px; white-space:nowrap">1.53 <span style="color:var(--text-secondary)">424×240×15</span></span></div>
+        <div style="position:absolute; right:0; top:-20px; font-size:.78rem; text-align:right; white-space:nowrap">
+          12.2 <span style="color:var(--text-secondary)">848×480×30</span></div>
+      </div>
+      <div class="axis" style="margin-top:26px"><span>0</span><span>6</span><span>12.2 M pt/s</span></div>
+      <p class="note" style="margin:14px 0 0"><b>같이 정리한 큰 오해</b>: <code>octomap_server</code>와 MoveIt의 octomap은 별개다.
+      MoveIt은 <code>/octomap_binary</code>를 구독하지 않고 <code>move_group</code> 안에서 자기 octree를 직접 만든다 →
+      둘 다 켜면 같은 클라우드로 octree를 두 번 만든다(이 랩탑에선 치명적).</p>
+    </div>
+  </div>
+
+  <!-- 5. 파라미터 표 -->
+  <div class="card">
+    <h2>확정한 파라미터와 근거</h2>
+    <p class="note">값보다 <b>왜 그 값인지</b>가 자산이다.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>파라미터</th><th>변경</th><th>근거</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>depth/color 프로파일</td><td class="num">848×480×30 → <b>424×240×15</b></td><td class="why">12.2 M pt/s는 이 랩탑에서 안 돎(실측)</td><td>✅ 채택</td></tr>
+        <tr><td><code>point_subsample</code></td><td class="num">1 → <b>3</b></td><td class="why">GPU 없는 15W CPU 부하 축소</td><td>✅ 채택</td></tr>
+        <tr><td><code>padding_offset</code></td><td class="num">0.03 → <b>0.1 m</b></td><td class="why">self-filter 잔여점 제거. 키우면 진짜 장애물도 깎인다 — 캘리브 정확도가 하한을 정한다</td><td>✅ 채택</td></tr>
+        <tr><td><code>padding_scale</code></td><td class="num">1.0 → <b>2.0</b></td><td class="why">위와 같은 목적의 배율 손잡이</td><td>✅ 채택</td></tr>
+        <tr><td><code>octomap_frame</code></td><td class="num">→ <b>base_link</b></td><td class="why">MoveIt은 fixed virtual joint로 모델 프레임을 만들지 않아 planning frame이 루트 링크로 남음. <code>world</code>로 발행하면 <b>조용히 무시</b>됨(실측)</td><td>✅ 실측 확정</td></tr>
+        <tr><td><code>octomap_resolution</code></td><td class="num">0.02 m (유지)</td><td class="why">캘리브 잔차 40 mm가 이보다 커서 현재는 캘리브가 정밀도를 지배</td><td>✅ 유지</td></tr>
+        <tr><td><code>default_object_padding</code></td><td class="num">신규 <b>0.02 m</b></td><td class="why">scene object 충돌 판정 여유</td><td>✅ 신규</td></tr>
+        <tr><td><code>max_range</code></td><td class="num">2.5 → 1.5 → <b>2.0 m</b></td><td class="why">1.5는 카메라~base 실측 1.684 m보다 작아 베이스 부근을 잘라냄. CPU 손잡이도 아니다(비용은 거리가 아니라 점 개수에 비례)</td><td>⚠️ 실기 미검증</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- 6. 코드 수정 이력 -->
+  <div class="card">
+    <h2>코드 수정 이력 — 기존 플로우에서 내가 고친 부분</h2>
+    <p class="note"><b>줄 수는 2026-08-03 하루치</b>(커밋 <code>7d96b06</code>, <code>d7af603</code>), 내용의 비교 기준선은 튜토리얼 원본(<code>6ad204a</code>)이다.
+    <b>알고리즘(Park-Martin / <code>cv2.calibrateHandEye</code>)은 그대로 두었다</b> — 고친 건 전부 <b>입력·검증·출력</b> 쪽이다.
+    날짜가 붙은 항목은 그날 한 작업이고, 나머지는 오늘치다.<br>
+    <b>내역</b>: 캘리브 <code>+348</code> · 런치/설정 <code>+54</code> · 신규 패키지 <code>webcam_perception</code> <code>+200</code> = <b>+602 / −90</b>.
+    별도로 <b>문서 +718 / −46</b>(<code>rosbag-d435i.md</code> +347, <code>review_moveit.md</code> +127, 계획 2건 +117 등).
+    RViz 저장본(<code>moveit.rviz</code> +171, <code>default.rviz</code>)은 툴이 자동 생성한 것이라 뺐다.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="fhead"><code>eye2hand_calibration.py</code>
+        <span class="stat">오늘 <span class="add">+316</span> / <span class="del">−67</span> · 현재 557줄</span></div>
+      <p class="note">eye-to-hand 본편. 수정의 8할이 여기 있다.</p>
+      <div class="chg">
+
+        <div class="chg-item risk">
+          <div class="t">① 칸 크기 하드코딩 — 조용히 4.2% 부풀던 버그 <span class="stat">08-02</span></div>
+          <div class="was"><b>기존</b><span><code>objp … * 25</code> · <code>checkerboard_size=(8,6)</code> — 인자 <code>square_size</code>를 받고도 안 씀</span></div>
+          <div class="now"><b>수정</b><span><code>* square_size</code> · <code>(10,7)</code>, <code>square_size=24.0</code> (캘리퍼스 실측)</span></div>
+          <div class="why">에러가 안 난다. 25/24 = 모든 거리가 <b>+4.2%</b>(500 mm → 521 mm). 코너 개수 쪽은 틀리면 요란하게 실패해서 오히려 안전하다.</div>
+        </div>
+
+        <div class="chg-item risk">
+          <div class="t">② 내부파라미터를 공장값으로 고정</div>
+          <div class="was"><b>기존</b><span>매 실행 <code>cv2.calibrateCamera</code> 추정값을 그대로 사용</span></div>
+          <div class="now"><b>수정</b><span><code>USE_FACTORY_INTRINSICS=True</code> + 해상도별 <code>FACTORY_INTRINSICS</code> 딕셔너리, 추정값은 나란히 출력만</span></div>
+          <div class="why">고정 카메라라 보드 <b>거리 다양성</b>이 부족 → fx와 Z가 서로를 흡수(scale ambiguity). 추정 fx가 공장값보다 <b>7.7% 낮게</b> 나왔다(839.78 vs 909.53).
+          해상도별로 따로 적고 <b>스케일 환산은 하지 않는다</b> — fx/width가 0.6% 어긋난다(실측). 10% 이상 벌어지면 경고를 찍는다.</div>
+        </div>
+
+        <div class="chg-item">
+          <div class="t">③ 죽어 있던 수렴 검사 → RMS 재투영오차 출력</div>
+          <div class="was"><b>기존</b><span><code>if not ret:</code> — <code>ret</code>은 bool이 아니라 RMS(px)라 <b>0.0일 때만 걸리는</b> 사실상 죽은 검사</span></div>
+          <div class="now"><b>수정</b><span>RMS를 값으로 출력 + 1.0 초과 시 경고. 단 공장값을 쓰는 동안은 <b>결과 품질이 아니라 참고값</b>이라고 명시</span></div>
+        </div>
+
+        <div class="chg-item">
+          <div class="t">④ <code>report_residuals()</code> 신설 — 이 세션 최대 산출물</div>
+          <div class="was"><b>기존</b><span>결과 4×4 행렬만 출력. <b>어느 자세가 범인인지 알 방법이 없었다</b></span></div>
+          <div class="now"><b>수정</b><span>자세쌍별 회전·병진 잔차 + 30 mm 초과 카운트 + <b>판정 라인</b>(양호 / 불합격)</span></div>
+          <div class="why">같은 카메라를 30분 간격으로 두 번 캘리브해 148 mm·3.3° 벌어져도 예전엔 알아챌 수단이 없었다. <b>“다음 캘리브는 이 40.1 mm와 비교한다”</b>가 이걸로 가능해졌다.</div>
+        </div>
+
+        <div class="chg-item risk">
+          <div class="t">⑤ 판정 근거를 LOO → 병진잔차로 교체</div>
+          <div class="was"><b>기존</b><span>LOO 퍼짐만 보고 “양호” 출력 — 병진잔차 40 mm에 21/31쌍이 이상인 데이터도 <b>통과로 표시</b>됐다</span></div>
+          <div class="now"><b>수정</b><span>판정은 병진잔차 중앙값으로. LOO는 <b>참고 출력으로 강등</b>하고 한계 ①② 명시</span></div>
+          <div class="why">LOO는 리스트 순서만 섞어도 같은 크기로 움직이고(<code>alpha2 = logR(A[i+1])</code> 인접 순서 의존), 계통오차에는 눈이 멀다 — 잔차 큰 쌍을 한꺼번에 빼면 <b>80 mm</b>, LOO는 3.6 mm.</div>
+        </div>
+
+        <div class="chg-item">
+          <div class="t">⑥ 경고 라벨이 서로를 가리던 <code>elif</code> → 병기</div>
+          <div class="was"><b>기존</b><span>회전 부족을 먼저 보고 <code>else</code>로 넘김 → <b>병진잔차 143.7 mm 쌍이 ‘회전부족’ 라벨만 받고</b> 제거 후보에서 빠졌다</span></div>
+          <div class="now"><b>수정</b><span>두 조건은 배타가 아니므로 플래그를 <b>둘 다</b> 붙인다</span></div>
+        </div>
+
+        <div class="chg-item">
+          <div class="t">⑦ <code>--selfcheck</code> 신설 · 경로를 파일 기준으로</div>
+          <div class="now"><b>추가</b><span>합성 데이터로 <b>X = T_base←cam 방향</b>과 <b>G(판↔그리퍼) 소거</b>를 증명(오차 ~1e-13). 실기 없이 도는 유일한 검산</span></div>
+          <div class="now"><b>추가</b><span><code>DATA_DIR = Path(__file__).parent/"data"</code> — VS Code(루트)와 터미널(이 디렉토리)의 cwd 불일치 제거</span></div>
+          <div class="now"><b>추가</b><span>이미지 해상도가 섞이면 <code>SystemExit</code> — 이제 해상도가 공장값 딕셔너리의 <b>키</b>라서 섞이면 전부 틀린 내부파라미터가 먹는다</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="fhead"><code>data_recording.py</code>
+        <span class="stat">오늘 <span class="add">+32</span> / <span class="del">−10</span></span></div>
+      <p class="note">수집 단계. “조용히 잘못 수집되는” 경로를 끊는 게 목적.</p>
+      <div class="chg">
+        <div class="chg-item">
+          <div class="t">수집 소스를 RealSense ROS 토픽으로</div>
+          <div class="was"><b>기존</b><span><code>cv2.VideoCapture(DEVICE_NUMBER)</code> — V4L2 <code>/dev/videoN</code> 고정</span></div>
+          <div class="now"><b>수정</b><span><code>USE_REALSENSE_TOPIC</code> 스위치 (D435i는 토픽, C270은 V4L2). <code>read_frame()</code>으로 소스 차이를 흡수</span></div>
+        </div>
+        <div class="chg-item risk">
+          <div class="t">TCP 설정 실패를 끊는다</div>
+          <div class="was"><b>기존</b><span><code>set_tool("Tool Weight_2FG")</code> / <code>set_tcp("2FG_TCP")</code> — 반환값 미검사</span></div>
+          <div class="now"><b>수정</b><span>등록명 없으면 <code>-1</code>을 돌려주고 <b>아무것도 안 바꾼다</b> → <code>SystemExit</code> + <code>get_tcp()</code> 되읽기 확인</span></div>
+          <div class="why">수집을 다 끝낸 뒤에 알아채면 실기 시간이 통째로 날아간다. 이름도 이 리그의 실제 등록명(<code>Tool Weight</code>/<code>GripperDA_v1</code>)으로 교체.</div>
+        </div>
+        <div class="chg-item">
+          <div class="t">ESC 정상 종료 · 경로 기준 · 해상도 지침</div>
+          <div class="was"><b>기존</b><span>루프 탈출 코드 없음 → Ctrl+C뿐이라 json이 잘릴 수 있음</span></div>
+          <div class="now"><b>수정</b><span>ESC로 정상 종료(수집 개수 출력), <code>./data</code> → 파일 기준 경로, <b>1280×720으로 띄운 뒤 수집</b> 지침 명문화</span></div>
+        </div>
+        <div class="chg-item">
+          <div class="t"><code>RECORD_IN_FLANGE_FRAME</code> 플래그 신설</div>
+          <div class="now"><b>추가</b><span>flange/TCP 어느 쪽으로 기록해도 <b>결과는 같다</b>(G 소거)는 근거를 코드 주석에 고정. 진짜 금기는 <b>수집 도중 변경</b>이라고 명시</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="fhead"><code>camera.launch.py</code>
+        <span class="stat">오늘 <span class="add">+41</span> / <span class="del">−8</span> · 전체 122줄</span></div>
+      <p class="note">08-02 신설(<code>6fadf86</code>) 이후 세 번 고쳤고, 그중 <b>두 번이 오늘</b>이다. TF 값은 <b>여기 하드코딩하지 않는다</b>가 설계 전제.
+      같은 커밋에서 <code>sensors_3d.yaml</code>(+4/−4)·<code>moveit.launch.py</code>(+9/−1)도 함께 고쳤다.</p>
+      <div class="chg">
+        <div class="chg-item">
+          <div class="t">08-02 <code>bb3322d</code> — 프로파일 인자화 + 기본값 하향</div>
+          <div class="was"><b>기존</b><span>드라이버 기본 <code>848×480×30</code> = 12.2 M pt/s (이 랩탑에서 안 돎)</span></div>
+          <div class="now"><b>수정</b><span><code>depth_profile</code>/<code>color_profile</code> 인자 + 기본 <b>424×240×15</b>. GPU PC에선 인자로 올린다</span></div>
+          <div class="why">color도 같이 내린 이유: <code>align_depth.enable=true</code>면 depth를 <b>color 해상도로 리샘플</b>해서 color만 크면 낮춘 의미가 없다.</div>
+        </div>
+        <div class="chg-item">
+          <div class="t">08-03 <code>7d96b06</code> — <code>dxyz</code>/<code>drpy</code> 미세보정 손잡이 신설</div>
+          <div class="was"><b>기존</b><span>보정하려면 재캘리브(<b>20분</b>) 또는 npy를 직접 손대야 함</span></div>
+          <div class="now"><b>수정</b><span><code>OpaqueFunction</code>으로 재구성 → <code>driver:=false drpy:="0 1.5 0"</code>로 <b>카메라 재기동 없이 TF만 수 초 만에</b> 재발행</span></div>
+          <div class="why">평행이동은 base_link 축(RViz에서 보는 축), 회전은 camera_link 자기 축 — 테이블이 기울어 보이는 건 대개 pitch 1~3°라 이쪽이 손으로 맞추기 쉽다. <b>빠른 반복 루프를 만드는 것 자체가 목적.</b></div>
+        </div>
+        <div class="chg-item">
+          <div class="t">08-03 <code>d7af603</code> — 문서화된 실행 순서 정정</div>
+          <div class="was"><b>기존</b><span>3단계가 <code>dsr_moveit_config_m0609 demo.launch.py</code></span></div>
+          <div class="now"><b>수정</b><span><code>m0609_rg2_moveit moveit.launch.py standalone:=false</code> — 패키지명 불일치로 애초에 안 뜨고, 떠도 그 URDF엔 <b>RG2가 없다</b></span></div>
+        </div>
+        <div class="chg-item risk">
+          <div class="t">설계 전제: npy를 매 launch 읽어 계산</div>
+          <div class="now"><b>유지</b><span><code>config/T_cam2base.npy</code>(정본의 symlink)를 <code>calib_npy_to_tf.py</code>로 변환해 발행. npy가 없으면 카메라만 뜨고 경고</span></div>
+          <div class="why">하드코딩된 <code>static_transform_publisher</code> 명령을 다시 만들지 않기 위해서다 — 낡은 값으로 <b>340 mm</b> 어긋난 이력. 단위(mm→m)와 <b>OpenCV optical → REP-103 변환도 그 한 파일에서만</b> 한다(신규 102줄, roll이 ±90° 근처면 경고).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="fhead"><code>webcam_perception</code>
+        <span class="stat">신규 패키지 <span class="add">+200</span> · 7파일</span></div>
+      <p class="note">같은 커밋의 별개 트랙(C270 웹캠 인식). 위 캘리브·Octomap 작업과 코드 의존이 없다.</p>
+      <div class="chg">
+        <div class="chg-item">
+          <div class="t"><code>sam_mask_node.py</code> — 배경색 기반 자동 박스 + 마스크 발행</div>
+          <div class="now"><b>신규</b><span>네 모서리 색을 배경으로 가정해 최대 전경 덩어리의 bounding box를 뽑고, 실패하면 <code>fallback_box_*</code>로 되돌아간다. <code>/webcam/image_raw</code> → <code>/webcam/segmentation_mask</code></span></div>
+          <div class="why">임계값·박스가 전부 <code>declare_parameter</code>(8개)로 노출돼 있고 구독은 <code>SensorDataQoS</code>다. 테스트 <code>test_sam_mask.py</code> 동봉(30줄). <b>GPU 없는 개인PC에서 도는 대체 경로</b>로 만든 것 — SAM 본체는 GPU PC 몫.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>도메인 무관 방법론 <span class="tag">8개 추출</span></h2>
+      <ul class="lessons">
+        <li><b>가설은 숫자로 채점한다.</b> 물리적으로 참이어야 할 양을 정하고 모든 가설을 그 위에서 비교(→ 시선각 32.5°).</li>
+        <li><b>정당화 문장을 쓰기 전에 명령을 한 번 돌린다.</b> SRDF만 읽고 추론한 <code>world</code> 결론이 틀렸다 — 필요했던 건 CollisionObject 발행 한 번.</li>
+        <li><b>민감도 지표는 “무엇에 대한 민감도”인지 명시한다.</b> LOO는 랜덤 노이즈만 재고 계통오차엔 눈이 멀다 — 잔차 큰 쌍을 한꺼번에 빼면 <b>80 mm</b> 이동, LOO는 3.6 mm.</li>
+        <li><b>값이 두 곳에 있으면 반드시 갈라진다.</b> 사본 금지 — 같은 구조의 사고가 340·480 mm로 이틀 연속.</li>
+        <li><b>읽기 의도의 실행에 쓰기 부작용을 두지 않는다</b> → <code>--no-save</code> 신설.</li>
+        <li><b>자주 바뀌는 값은 문서에 적지 않고 읽는 명령을 적는다.</b> 카메라 거리가 하루에 세 번 바뀜(1.48 → 1.542 → 1.684 m).</li>
+        <li><b>조용한 실패를 가정하고 설계한다.</b> 이 스택의 오류는 대부분 크래시가 아니라 무음이다.</li>
+        <li><b>물리값이 낀 버그는 코드보다 하드웨어를 먼저 의심한다</b>(강성·평면도·실측 치수·조명·케이블).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>다음 세션 과제 <span class="tag">측정되지 않은 것</span></h2>
+      <ul class="lessons">
+        <li><b>캘리브 오차 정량 측정</b> — 알려진 좌표의 물체로 cm 단위. 이 값 없이는 padding 해석이 <b>추론</b>이다.</li>
+        <li><b>경쟁 가설 하나를 빠뜨렸다</b>(세션 리뷰에서 발견): “장애물 경계가 모호”의 원인이 padding이 아니라 <code>max_range</code>(1.5 m &lt; 실측 1.684 m)일 수 있다. padding을 만지기 전에 range를 되돌려 재현하는 실험으로 먼저 가른다.</li>
+        <li><b>OMPL 플래너별 성공률·계획시간 로그</b> — cuRobo/nvblox 비교의 기준선(baseline).</li>
+        <li><b>카메라 마운트 강성 확보 후 자세 재수집</b> — 현행 캘리브는 전부 <b>잠정값</b>.</li>
+        <li>✅ <b>D435i rosbag 녹화는 끝났다</b> — 재캘리브 후 <code>rosbag/bag_0803calibed/</code> 4개, 1.9 GB, 요구 토픽 11개 + <code>base_link→camera_link</code>까지 내용으로 검증 통과(08-04 실측). 이제 실기 없이 개인PC에서 개발할 수 있다. 남은 건 장면 2개(빈 테이블 / 장애물 여러 개) 추가 녹화뿐.</li>
+        <li><b>NotebookLM 질문 17개</b> 정리 완료 — 캘리브 자세 설계, Park-Martin vs Tsai-Lenz, octomap 해상도 이론, narrow-passage 플래너 선택 등.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>이 스택의 실패는 크래시가 아니라 무음(silent no-op)이다</h2>
+    <ul class="lessons" style="columns:2; column-gap:32px">
+      <li><code>moveit-ros-perception</code> 미설치 → <b>3D 장애물 감지만 조용히 죽는다</b>(계획·실행은 정상).</li>
+      <li>센서 토픽은 BEST_EFFORT — RViz·<code>topic hz</code> 기본은 RELIABLE이라 <b>한 개도 못 받는다</b>.</li>
+      <li><code>base_0</code>는 TF 트리에 존재하지 않는다(URDF가 두 개). 벤더 예제를 그대로 쓰면 전부 죽는다.</li>
+      <li><code>realsense-viewer</code>가 USB를 독점 → 증상이 “TF 프레임 없음”으로 나와 캘리브 오진 유발.</li>
+      <li><code>ROS_DOMAIN_ID</code> 불일치 → 노드가 죽은 게 아니라 안 보이는 것.</li>
+      <li>MoveIt 컨트롤러 이름이 네임스페이스와 어긋나면 <b>Plan은 되고 Execute만 ABORTED</b>.</li>
+    </ul>
+    <details>
+      <summary>표로 보기 (차트 값 원본)</summary>
+      <div class="scroll"><table>
+        <thead><tr><th>항목</th><th>값</th><th>단위</th></tr></thead>
+        <tbody>
+          <tr><td>잔차 · 직전 26장</td><td class="num">23.5</td><td>mm</td></tr>
+          <tr><td>잔차 · 오늘 34장</td><td class="num">40.1</td><td>mm</td></tr>
+          <tr><td>판정선 (octomap voxel)</td><td class="num">20</td><td>mm</td></tr>
+          <tr><td>시선각 · T·optical (채택)</td><td class="num">32.5</td><td>°</td></tr>
+          <tr><td>시선각 · inv(T)·body</td><td class="num">42.0</td><td>°</td></tr>
+          <tr><td>시선각 · inv(T)·optical</td><td class="num">52.0</td><td>°</td></tr>
+          <tr><td>시선각 · T·body (버그)</td><td class="num">81.0</td><td>°</td></tr>
+          <tr><td>무음 오차 · npy 사본</td><td class="num">480</td><td>mm</td></tr>
+          <tr><td>무음 오차 · TF 하드코딩</td><td class="num">340</td><td>mm</td></tr>
+          <tr><td>포인트 생성량 · 변경 전</td><td class="num">12.2</td><td>M pt/s</td></tr>
+          <tr><td>포인트 생성량 · 채택</td><td class="num">1.53</td><td>M pt/s</td></tr>
+        </tbody>
+      </table></div>
+    </details>
+  </div>
+
+  <p class="note" style="margin-top:20px">출처: <code>md/2026-08-03-notebooklm-digest.md</code> · <code>md/state.md</code> · <code>md/rosbag-d435i.md</code> ·
+  <code>git log/diff/numstat</code>(코드 줄 수) · <code>eye2hand_calibration.py</code>의 소스 주석(148 mm·3.3°, 143.7 mm, 0.6%).
+  그 외 수치는 문서에 기록된 값 그대로이고, 계산한 값은 8.0×(12.2/1.526) · +71%(23.5→40.1) · 48.5°p(81.0−32.5) · 줄 수 합계뿐이다.
+  ⚠️ 표시 항목은 실기 미검증.</p>
+</div>
+<div id="tip"></div>
+</div>
+
+<script>
+  const tip = document.getElementById('tip');
+  document.addEventListener('mouseover', e => {
+    const t = e.target.closest('[data-tip]');
+    if (!t) return;
+    tip.textContent = t.dataset.tip;
+    const r = t.getBoundingClientRect();
+    tip.style.opacity = 1;
+    tip.style.left = Math.min(r.left, window.innerWidth - 300) + 'px';
+    tip.style.top = (r.top > 90 ? r.top - 46 : r.bottom + 8) + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('[data-tip]')) tip.style.opacity = 0;
+  });
+</script>

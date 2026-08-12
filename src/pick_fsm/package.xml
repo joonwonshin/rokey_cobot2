@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>pick_fsm</name>
+  <version>0.1.0</version>
+  <description>음성 지시 pick 상태머신 (task_manager). MoveIt + RG2 명령 경로를 단독 소유한다.</description>
+  <maintainer email="wook9980@gmail.com">kimkh</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>   <!-- rqt_panel 이 task_manager 속도 파라미터를 set/get -->
+
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>   <!-- planned_tcp_path_node: 계획 TCP 경로 라인 시각화 -->
+
+  <exec_depend>pick_fsm_msgs</exec_depend>
+  <exec_depend>onrobot_rg_msgs</exec_depend>
+  <!-- robot_safety_node 가 /system/get_robot_state 등 Doosan 안전 서비스를 부른다 -->
+  <exec_depend>dsr_msgs2</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- 상태감시/승인 rqt 패널 (pick_fsm/rqt_panel.py) -->
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+  <exec_depend>python_qt_binding</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

@@ -1,0 +1,88 @@
+# cumotion_segmenter.yaml — T4: robot_segmenter_node (로봇 몸을 depth에서 지운다)
+#
+# 이 노드가 하는 일: /joint_states로 로봇 자세를 알아내 URDF/XRDF 충돌구를 depth 이미지에
+# 투영하고, 로봇에 해당하는 픽셀을 0(무효)으로 만들어 world_depth로 내보낸다.
+#
+# 🔴 이걸 빼면 cuMotion이 로봇 자기 몸을 장애물로 보고 계획이 전부 실패한다
+#    (INVALID_START_STATE_WORLD_COLLISION). nvblox는 MoveIt의 self-filter를 안 거친다.
+#
+# 🔴 이 노드가 파이프라인 병목이다 (2026-08-06 실측: 카메라 9.65 Hz → world_depth 3.7 Hz).
+#    "실시간 회피"의 상한을 여기가 정한다. nvblox를 아무리 빨리 돌려도 지도는 3.7 Hz다.
+#
+# ⚠️ 2026-08-11 재검토: 위 3.7 Hz는 재현되지 않았다 — 호스트↔컨테이너
+#    FASTRTPS_DEFAULT_PROFILES_FILE(README 6절/config/testcommand.md 참고)을 걸고 깨끗한
+#    상태에서 다시 재니 world_depth가 원본 1280x720에서도 9.2~10.0 Hz(카메라 속도 그대로)로
+#    나왔다. GPU 연산 자체는 프레임당 15.7ms로 여유가 크다. **3.7 Hz는 이 파일과 무관하게
+#    당시 FASTRTPS 미설정으로 인한 DDS 패킷 유실이었을 가능성이 크다(미확정 — 그때 조건
+#    기록이 없어 100% 단정은 아니다).** 병목이라고 다시 믿기 전에 FASTRTPS부터 확인할 것.
+#
+# 사용 (T4, 컨테이너):
+#   cd /workspaces/isaac_ros-dev
+#   ros2 run isaac_ros_cumotion robot_segmenter_node --ros-args \
+#     --params-file /workspaces/cobot2_ws_new/config/cumotion_segmenter.yaml
+#
+# 노드 이름은 'cumotion_robot_segmentation' 이지만 /**: 로 받으므로 이름이 바뀌어도 적용된다.
+# 근거 소스: isaac_ros_cumotion/isaac_ros_cumotion/isaac_ros_cumotion/robot_segmenter.py:49-75
+
+/**:
+  ros__parameters:
+    # ───────── 로봇 모델 ─────────
+    # robot 은 **파일명만** 준다(경로 아님). isaac_ros_cumotion_robot_description/xrdf/ 에서 찾는다.
+    # 🔴 cumotion_planner.yaml 과 반드시 같은 XRDF여야 한다. 다르면 "지우는 몸"과
+    #    "충돌검사하는 몸"이 달라져, 로봇 일부가 장애물로 남는데 원인이 안 보인다.
+    robot: "m0609_rg2.xrdf"
+    urdf_path: "/workspaces/isaac_ros-dev/m0609/m0609_kinematics.urdf"
+    cuda_device: 0
+
+    # ───────── 🔴 [최중요 튜닝] 로봇을 얼마나 두껍게 지울지 (m) ─────────
+    # 로봇 충돌구 표면에서 이 거리 안쪽의 depth 픽셀을 전부 무효로 만든다.
+    #
+    # 이 값 하나가 두 실패를 양쪽에서 만든다:
+    #   너무 크다 → **로봇에 가까이 간 손·물체가 같이 지워진다.**
+    #               집으려는 물체도, 피해야 할 사람 손도 로봇 근처에서 사라진다.
+    #               "가까이 갈수록 안 보이는" 현상이 나오면 여기다.
+    #   너무 작다 → 로봇 몸이 지도에 남아 INVALID_START_STATE_WORLD_COLLISION.
+    #
+    # 0.15 는 2026-08-06 실기에서 계획 10/10 성공한 검증값이다. 낮추려면 한 번에 하나씩:
+    #   0.15 → 0.12 → 0.10. 낮출 때마다 계획 10회를 돌려 실패가 생기는지 본다
+    #   (python3 /workspaces/cobot2_ws_new/scripts/bench_planning_time.py --repeat 10).
+    # ⚠️ 그리퍼 손가락 주변이 제일 먼저 깨진다 — 집으려는 물체가 손가락 15 cm 안에 들어오므로.
+    distance_threshold: 0.15
+
+    # ───────── 시간 동기 ─────────
+    # depth 이미지와 /joint_states의 스탬프 차이 허용치(초).
+    # 크게 잡으면 옛 관절값으로 마스크를 만들어 로봇이 어긋나게 지워지고(잔상),
+    # 작게 잡으면 매칭이 안 돼 world_depth 발행이 뚝뚝 끊긴다.
+    # ⚠️ 노드 안의 ApproximateTimeSynchronizer는 queue_size=100 **하드코딩**이라
+    #    파라미터로 못 줄인다(robot_segmenter.py:150). 지연이 쌓이면 아래 depth_qos로 막는다.
+    time_sync_slop: 0.1
+    tf_lookup_duration: 5.0
+
+    # ───────── QoS ─────────
+    # SENSOR_DATA = best_effort / KeepLast(5). DEFAULT = reliable / KeepLast(10).
+    # 실시간 회피에서는 **밀린 옛 프레임을 버리는 쪽**이 맞다. 이 노드는 카메라(9.65 Hz)보다
+    # 느리므로(3.7 Hz) reliable + depth 10이면 최대 10프레임(≈1초)치 옛 데이터가 큐에 쌓인다.
+    # 호환성: RealSense가 reliable로 발행하므로(현재 DEFAULT로 잘 받고 있다는 것이 근거)
+    #        best_effort 구독은 규약상 호환된다. 문제가 생기면 "DEFAULT"로 되돌린다.
+    # ⚠️ world_depth_qos 는 바꾸지 말 것 — nvblox가 SYSTEM_DEFAULT(reliable)로 구독한다.
+    #    발행만 best_effort로 바꾸면 QoS 불일치로 nvblox가 **아무것도 못 받는다**(조용히).
+    depth_qos: "SENSOR_DATA"
+    depth_info_qos: "DEFAULT"
+    mask_qos: "DEFAULT"
+    world_depth_qos: "DEFAULT"
+
+    # ───────── 토픽 ─────────
+    joint_states_topic: "/joint_states"
+    depth_image_topics: ["/camera/camera/aligned_depth_to_color/image_raw"]
+    depth_camera_infos: ["/camera/camera/aligned_depth_to_color/camera_info"]
+    robot_mask_publish_topics: ["/cumotion/camera_1/robot_mask"]
+    world_depth_publish_topics: ["/cumotion/camera_1/world_depth"]
+
+    # ───────── 마스크 후처리 ─────────
+    # 마스크에 생기는 작은 얼룩(speckle)을 제거한다. cv2 연산이라 CPU를 더 쓴다.
+    # 로봇 경계에 점 몇 개가 남아 nvblox에 로봇 잔재가 보이면 true로 켜 본다.
+    filter_speckles_in_mask: true
+    max_filtered_speckles_size: 1250
+
+    log_debug: false
+    update_link_sphere_server: "segmenter_attach_object"

@@ -1,0 +1,182 @@
+# nvblox_realtime.yaml — cuMotion 실시간 장애물 회피용 파라미터
+#
+# 설계 의도: nvblox를 "누적 지도"가 아니라 "지금 카메라가 보는 것만 담는 점유격자"로 쓴다.
+#   - 정밀도·지도 유지력을 버리고 갱신 속도와 깨끗함을 산다
+#   - 카메라가 고정(base_link→camera_link static TF)이라 FOV 밖 지도는 어차피 오래된 것
+#   - cuRobo는 미관측 복셀을 "자유공간"으로 취급한다(octomap과 반대) — 아래 bounds 밖은 안 보인다
+#
+# 근거가 되는 소스 (컨테이너 /workspaces/isaac_ros-dev/src):
+#   isaac_ros_nvblox/nvblox_ros/nvblox_core/nvblox/include/nvblox/**/​*_params.h
+#   isaac_ros_nvblox/nvblox_ros/src/lib/nvblox_node.cpp:195  (파라미터는 생성 시 1회만 읽음 → 재시작 필요)
+#
+# 사용 (T5):
+#   ros2 run nvblox_ros nvblox_node --ros-args \
+#     --params-file /workspaces/cobot2_ws_new/config/nvblox_realtime.yaml \
+#     -r camera_0/depth/image:=/cumotion/camera_1/world_depth \
+#     -r camera_0/depth/camera_info:=/camera/camera/aligned_depth_to_color/camera_info
+#
+# 🔴 cumotion_planner.yaml 과 **반드시 같이 맞춰야 하는 것 두 가지**:
+#    ① voxel_size          — 다르면 cumotion_planner.py:410 에서 FATAL로 죽는다(즉시 발각).
+#    ② 감시상자 범위        — workspace_bounds_* ↔ grid_center_m/grid_size_m.
+#                            어긋나도 아무 에러가 안 난다. 조용히 장애물을 놓친다.
+
+/**:
+  ros__parameters:
+    # ───────── 기본 ─────────
+    cuda_stream_type: 1
+    voxel_size: 0.05
+    num_cameras: 1
+    use_tf_transforms: true
+    mapping_type: "static_tsdf"
+    global_frame: "base_link"
+
+    # ───────── 처리 주기 (<=0 이면 그 처리를 안 함) ─────────
+    tick_period_ms: 10
+    integrate_depth_rate_hz: 40.0        # 입력이 3.7 Hz라 사실상 "오는 즉시 통합"
+    integrate_color_rate_hz: -1.0        # 계획에 색은 필요 없다 → 끔
+    integrate_lidar_rate_hz: -1.0
+    update_mesh_rate_hz: 2.0             # RViz 확인용으로만 유지
+    update_esdf_rate_hz: 10.0
+    publish_layer_rate_hz: 2.0
+    publish_debug_vis_rate_hz: -1.0
+    decay_tsdf_rate_hz: 10.0             # base 5.0 → 잔상 소거의 주 경로
+    decay_dynamic_occupancy_rate_hz: -1.0
+    clear_map_outside_radius_rate_hz: 2.0
+
+    # ───────── 콘솔 ─────────
+    print_rates_to_console: false
+    print_timings_to_console: false
+    print_delays_to_console: false
+    print_queue_drops_to_console: true   # 큐 드롭이 보여야 실시간성을 판정할 수 있다
+    print_statistics_on_console_period_ms: 10000
+
+    # ───────── ESDF ─────────
+    esdf_mode: "3d"                      # 🔴 2d면 cuMotion 첫 요청에 FATAL로 죽는다
+    publish_esdf_distance_slice: false   # 3d에서는 어차피 안 나감
+
+    # ───────── 입력 ─────────
+    use_color: false
+    use_depth: true
+    use_lidar: false
+    lidar_width: 1800
+    lidar_height: 31
+    lidar_min_valid_range_m: 0.1
+    lidar_max_valid_range_m: 50.0
+    use_non_equal_vertical_fov_lidar_params: false
+    maximum_input_queue_length: 2        # base 10 → 밀리면 오래된 프레임을 버린다(지연 억제)
+    input_qos: "SYSTEM_DEFAULT"          # 세그멘터가 DEFAULT(reliable)로 발행 → 바꾸지 말 것
+
+    # ───────── 지도 범위 ─────────
+    # 이 반경 밖 블록은 통째로 해제한다. 아래 workspace_bounds가 이미 잘라주므로
+    # 여기는 안전망이다. 감시상자의 제일 먼 모서리까지가 1.25 m라 1.5로 잡았다.
+    map_clearing_radius_m: 1.5           # base 7.0
+    map_clearing_frame_id: "base_link"
+
+    # ───────── 시각화 (계획에는 영향 없음) ─────────
+    esdf_slice_bounds_visualization_attachment_frame_id: "base_link"
+    esdf_slice_bounds_visualization_side_length: 2.0
+    workspace_height_bounds_visualization_attachment_frame_id: "base_link"
+    workspace_height_bounds_visualization_side_length: 2.0
+    layer_visualization_min_tsdf_weight: 0.1
+    layer_visualization_exclusion_height_m: 1.2
+    layer_visualization_exclusion_radius_m: 2.0
+    layer_visualization_undo_gamma_correction: false
+    max_back_projection_distance: 2.0
+    back_projection_subsampling: 2
+    layer_streamer_bandwidth_limit_mbps: -1.0
+
+    multi_mapper:
+      connected_mask_component_size_threshold: 2000
+      remove_small_connected_components: true
+
+    static_mapper:
+      # ── 통합 ──
+      do_depth_preprocessing: false
+      depth_preprocessing_num_dilations: 3
+      # base 5.0 → 2 m 밖은 지도에 안 넣는다.
+      # 검산: 카메라(base_link 기준 [1.237,-0.223,0.784])에서 감시상자의 가장 먼 모서리
+      #       (-0.2, 0.5, -0.05)까지가 1.812 m. 2.0 m면 상자 전체를 덮고 0.19 m 여유가 남는다.
+      #       ⚠️ 아래 workspace_bounds를 넓히면 이 값도 같이 키워야 한다. 안 그러면
+      #          상자 먼 쪽 구석이 조용히 미관측(=cuRobo에겐 자유공간)이 된다.
+      projective_integrator_max_integration_distance_m: 2.0
+      projective_integrator_truncation_distance_vox: 4.0      # 얇게 하면 표면에 구멍 → 유지
+      projective_integrator_weighting_mode: "inverse_square_tsdf_distance_penalty"
+      # ⚠️ 2026-08-07 이분법 실험 중. 원래 값: max_weight 2.0 / invalid_depth_decay_factor 0.8
+      #    증상: 이 yaml 을 얹으면 복셀이 2500~2850개 → **2개**. base yaml 만 쓰면 정상.
+      #    ⚠️ `-p static_mapper.*` 오버라이드는 **먹지 않는다**(nvblox 가 yaml 로 되덮는다).
+      #       그래서 이 파일을 직접 고쳐야 시험이 된다.
+      projective_integrator_max_weight: 5.0                   # 원래 2.0 (실험 중)
+      projective_tsdf_integrator_invalid_depth_decay_factor: -1.0   # 원래 0.8, base 는 -1.0(끔)
+      #   ↑ base -1.0(꺼짐). 무효 depth 픽셀에 투영되는 복셀을 감쇠 = 동적 물체 아웃라이어 제거.
+      #     ⚠️ 세그멘터가 지운 로봇 마스크도 "무효 depth"다 → 로봇 뒤에 가려진 물체도 같이 흐려진다.
+
+      # ── occupancy (static_tsdf에서는 미사용) ──
+      free_region_occupancy_probability: 0.45
+      occupied_region_occupancy_probability: 0.55
+      unobserved_region_occupancy_probability: 0.5
+      occupied_region_half_width_m: 0.1
+
+      # ── 시야 계산 / 작업공간 절단 ──
+      raycast_subsampling_factor: 2      # base 4 → 레이를 촘촘히 = 자유공간 파내기(소거)가 정확해짐
+      #
+      # 🔴 감시상자(監視箱) — 여기가 이 파일에서 제일 자주 만질 곳이다.
+      #    global_frame(base_link) 기준. **작업영역보다 넓어야 한다.**
+      #      작업영역 (사용자 지정): x 0.00~0.70, y -0.30~0.30
+      #      감시상자 (= 작업영역 + 여유 0.2 m): 아래 값
+      #    여유를 두는 이유 둘:
+      #      ① 팔꿈치·상완은 TCP 작업영역 **밖**을 지난다. 상자를 작업영역에 딱 맞추면
+      #         팔이 지나는 공간의 장애물이 안 보인다.
+      #      ② 사람 손은 작업영역에 **들어오기 전에** 보여야 피할 시간이 생긴다.
+      #    🔴 이 상자 밖 장애물은 cuMotion에게 "없는 것"이 된다 (cuRobo는 미관측=자유공간).
+      #       octomap과 반대 방향의 위험이다. 좁힐 때는 반드시 팔 궤적 전체를 덮는지 확인할 것.
+      #    ⚠️ cumotion_planner.yaml 의 grid_center_m/grid_size_m 와 **같은 상자**로 유지한다.
+      #       한쪽만 고치면 조용히 어긋난다 (에러도 경고도 안 난다).
+      # ⚠️ 2026-08-07 이분법 실험 중 — 원래 값은 "bounding_box" 다. 끝나면 되돌린다.
+      #    배제된 것: 입력(world_depth 3.7 Hz), T6 ESDF 클라이언트(재시작 무효),
+      #               감쇠 4종(base 값으로 되돌려도 2개→5개), 맵 정리(꺼도 그대로)
+      #    남은 것이 이 상자다. base yaml(상자 없음)=2500~2850개 vs 우리 yaml=한 자릿수.
+      workspace_bounds_type: "unbounded"
+      workspace_bounds_min_corner_x_m: -0.20   # 작업 0.00 - 0.20
+      workspace_bounds_max_corner_x_m:  0.80   # 작업 0.70 + 0.20
+      workspace_bounds_min_corner_y_m: -0.50   # 작업 -0.30 - 0.20
+      workspace_bounds_max_corner_y_m:  0.50   # 작업  0.30 + 0.20
+      workspace_bounds_min_height_m:   -0.35
+      #   ↑ 🔴 **2026-08-07 실측으로 정한 값. 추정치가 아니다.**
+      #     이전 값 -0.05 는 "base_link의 z=0 이 테이블 상판"이라는 가정이었는데 **틀렸다.**
+      #     실측: 카메라 포인트클라우드를 base_link 로 변환해 보니 상판이 **z ≈ -0.30 m**.
+      #           로봇이 받침대 위에 올라가 있다. 상판 중앙값 -0.297, 99% 0.389, 최대 0.472.
+      #     증상: -0.05 로 두면 테이블과 그 위 물체가 통째로 상자 밖으로 빠져 **복셀이 0개가 된다.**
+      #           (2026-08-07 실기: 2500~2850개 → 0~2개. nvblox는 살아 있는데 지도만 빈다 —
+      #            계획은 계속 성공하므로 로봇이 통과한 뒤에야 안다)
+      #     -0.35 = (상판 -0.30) - 0.05. 상판을 5 cm 두께로 남겨 테이블을 장애물로 보게 한다.
+      #     ⚠️ 로봇이나 테이블을 옮기면 이 값이 무효다. 다시 재는 법 둘:
+      #        ① RViz Fixed Frame=base_link + PointCloud2 + Select 도구로 상판 점의 z를 읽는다
+      #        ② 포인트클라우드를 base_link 로 변환해 z 백분위수를 찍는다(중앙값이 상판이다)
+      workspace_bounds_max_height_m:    0.70   # 테이블 위 물체 집기 + 팔이 드는 높이
+
+      # ── ESDF ──
+      esdf_integrator_min_weight: 0.1            # 이 아래로 감쇠하면 장애물에서 빠진다(소거 판정선)
+      esdf_integrator_max_site_distance_vox: 1.0 # base 2.0 → 장애물 부풀림 10 cm → 5 cm
+      esdf_integrator_max_distance_m: 1.0        # base 2.0 → ESDF 계산량 절반
+
+      # ── 메쉬 (시각화) ──
+      mesh_integrator_min_weight: 0.1
+      mesh_integrator_weld_vertices: true
+
+      # ── TSDF 감쇠 (잔상 소거) ──
+      tsdf_decay_factor: 0.95                    # 원래 0.75 (2026-08-07 실험 중, base 가 0.95)
+      tsdf_decayed_weight_threshold: 0.001
+      exclude_last_view_from_decay: true         # 지금 프레임에 유효 depth가 있는 복셀은 감쇠 제외
+      # false(현재): 다 감쇠된 복셀은 weight만 0이 되고 마지막 거리값을 들고 있다가
+      #              블록이 해제될 때 사라진다. ESDF는 weight < esdf_integrator_min_weight
+      #              인 복셀을 어차피 무시하므로 소거 자체는 된다.
+      # true      : 다 감쇠되는 순간 "자유공간"으로 확정한다(tsdf_decayed_free_distance_vox).
+      #              잔상이 더 확실히 지워지는 대신, 가려져서 못 보는 곳도 자유로 단정한다.
+      #              잔상이 계속 거슬리면 여기를 true로 올리는 게 다음 수다.
+      tsdf_set_free_distance_on_decayed: false
+      tsdf_decayed_free_distance_vox: 4.0
+      decay_integrator_deallocate_decayed_blocks: false   # 원래 true (2026-08-07 실험 중)
+
+      # ── 스트리머 ──
+      layer_streamer_exclusion_height_m: 1.2
+      layer_streamer_exclusion_radius_m: 2.0

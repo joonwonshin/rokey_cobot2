@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+FastDDS 를 UDPv4 전용으로 강제한다. 호스트 <-> 도커 컨테이너 사이에서만 필요하다.
+
+왜 필요한가 (실측, 2026-08-06):
+  FastDDS(= ROS 2 Humble 기본 RMW)는 같은 호스트로 판단되면 공유메모리(SHM) 전송을 쓴다.
+  그런데 컨테이너 경계에서는 SHM 이 성립하지 않는다:
+    - 토픽 탐색은 된다 (UDP 멀티캐스트). ros2 topic list, ros2 topic info -v 로
+      퍼블리셔와 QoS 까지 다 보인다.
+    - 데이터는 안 온다. ros2 topic hz 가 0 건이다.
+  즉 "토픽은 보이는데 안 열린다"로 나타나 원인을 찾기 어렵다.
+  기본 RMW 라서 안 겪는 문제가 아니라, 기본 RMW 라서 겪는 문제다.
+
+배제한 대안 (둘 다 실측으로 실패):
+    docker run 의 ipc=host   /dev/shm 은 실제로 공유된다(양쪽에서 같은 fastrtps_* 파일이
+                             보인다). 그래도 데이터는 안 온다.
+    docker run 의 pid=host   PID 네임스페이스를 붙여도 안 온다.
+
+[주의] 호스트와 컨테이너 양쪽 터미널 모두에 export 해야 한다. 한쪽만 하면 여전히 안 온다.
+    export FASTRTPS_DEFAULT_PROFILES_FILE=/home/kimkh/cobot2_ws_new/fastdds_udp_only.xml
+
+[대역폭] 640x480 bgr8 = 921KB 는 UDP 단편화 대상이라 소켓 버퍼가 결정적이다.
+    이 랩탑은 net.core.rmem_max = 212992 (리눅스 기본)로 이미지 한 장보다 작지만,
+    아래 sendBufferSize/receiveBufferSize 를 키우면 실측으로 손실이 사라진다 (A/B, 2026-08-06):
+        버퍼 설정 없음 : 10Hz 로 쏘면 5.0~7.3Hz 도착 (손실)
+        버퍼 설정 있음 : 10Hz -> 10.003Hz 도착 (무손실)
+    30fps 이상이나 더 큰 해상도로 올릴 때 다시 재면 된다. 그때도 부족하면 sysctl 로
+    rmem_max 를 올리거나(공유 랩탑이라 시스템 전역 변경, 팀 합의 필요) compressed 토픽을 쓴다.
+-->
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <profiles>
+    <transport_descriptors>
+      <transport_descriptor>
+        <transport_id>udp_only</transport_id>
+        <type>UDPv4</type>
+        <!-- 커널 rmem_max/wmem_max 에 걸려 잘린다. 상한을 올린 머신에서 효과가 난다. -->
+        <sendBufferSize>8388608</sendBufferSize>
+        <receiveBufferSize>8388608</receiveBufferSize>
+      </transport_descriptor>
+    </transport_descriptors>
+    <participant profile_name="udp_participant" is_default_profile="true">
+      <rtps>
+        <userTransports><transport_id>udp_only</transport_id></userTransports>
+        <useBuiltinTransports>false</useBuiltinTransports>
+      </rtps>
+    </participant>
+  </profiles>
+</dds>

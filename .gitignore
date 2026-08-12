@@ -1,0 +1,40 @@
+# ── colcon 산출물 ────────────────────────────────────────
+# 🔴 절대경로가 박히므로 워크스페이스를 옮기면 어차피 못 쓴다. 커밋하면 안 된다.
+build/
+install/
+install_container/
+build_container/
+log/
+
+# ── 파이썬 ───────────────────────────────────────────────
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ── 🔴 비밀 ──────────────────────────────────────────────
+# OPENAI_API_KEY 가 들어간다. 절대 커밋하지 않는다.
+.env
+*.env
+!.env.example
+
+# ── 외부 저장소 (scripts/fetch_externals.sh 가 받는다) ──
+isaac_ros-dev/
+src/cobot_rg2/doosan-robot2/
+src/cobot_rg2/onrobot-ros2/
+
+# ── 실행 중 생기는 것 ────────────────────────────────────
+# graspx 가 캡처하는 씬(4파일 × N). 입력이 아니라 출력이라 재현에 필요 없다.
+src/graspgenx_perception/data/graspgenx_scene/
+runs/
+output/
+*.log
+*.bag
+rosbag*/
+
+# ── 편집기 ───────────────────────────────────────────────
+.vscode/
+.idea/
+.obsidian/
+*.swp

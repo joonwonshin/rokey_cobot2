@@ -1,0 +1,42 @@
+# 목표 물체 하나에 대해 "실행 가능한 grasp 1개 + 대안들"을 돌려준다.
+# 기존 od_msg/SrvDepthPosition(float64[] depth_position = 3D 점 하나)의 격상판이다.
+# 점 하나로는 그립을 못 만든다 — 어느 방향에서 어떤 자세로 접근할지가 빠지기 때문.
+#
+# 설계 출처: src/PACKAGES.md#pick_fsm (인터페이스 계약)
+# (옛 설계 문서는 2026-08-08 ws-cleanup 으로 삭제됐다 — PACKAGES.md#pick_fsm 이 단일 출처.)
+
+# ── Request ──────────────────────────────────────────────
+string  target           # "apple". get_keyword 출력을 그대로 넣는다. 빈 문자열이면 점수 최고 물체
+float32 min_confidence   # 이 값 미만 후보는 버린다. 0이면 서버 기본값
+
+---
+# ── Response ─────────────────────────────────────────────
+bool    success
+string  message          # 실패 사유 (검출 0 / 후보 0 / 도달 불가 …). 성공해도 요약을 채운다
+
+# ⚠️ 이름이 grasp_tcp가 아니라 grasp_pose인 것은 의도적이다.
+#    GraspGenX가 내는 4x4의 원점은 **그리퍼 base**이고 손끝(TCP)은 거기서 +Z로 떨어져 있다.
+#    이걸 "손끝 좌표"로 읽고 IK를 걸면 20 cm 넘게 더 밀어넣는다. frame_id는 base_link.
+# 🔴 여기 담기는 건 **GraspGenX 원시 grasp 프레임**이다 (+Z=접근축, +X=닫힘, 원점=그리퍼 base).
+#    tool0 목표 자세가 **아니다** — tool0의 접근축은 +Z가 아니라 +X다(2026-08-07 정정,
+#    md/context/constraints.md "정본: grasp 프레임 = rg2_base_link").
+#    변환은 소비자(pick_fsm task_manager)가 geometry.to_gripper_base()로 한다.
+#    생산자는 변환하지 말고 원시 프레임 그대로 채운다 — 양쪽에서 걸면 90° 더 돌아간다.
+geometry_msgs/PoseStamped grasp_pose
+
+# 물체를 **이 grasp 의 닫힘축에서 잰** 폭 [m]. 1/10 mm 변환은 **호출자(FSM)**가 한다.
+# ⚠️ 물체 대표 치수가 아니라 **후보별 값**이다 — 닫힘축이 후보마다 다르면 같은 물체라도 다르다.
+# ⚠️ 여기 담기는 건 **물체 폭**이지 그리퍼 명령값이 아니다. 그대로 닫으면 손가락이 물체
+#    표면에서 멈춘다(=안 잡힌다). 조임 여유를 **빼는** 것은 호출자 몫이다.
+# 0.0 = **모름**(구버전 워커/측정 실패). 호출자는 자기 기본값으로 대체해야 한다 — 0 으로
+#    닫으면 완전히 닫혀 물체를 으깬다.
+float64 width_m
+float32 confidence
+
+# 1등이 IK/계획에 실패했을 때 쓸 다음 후보들. grasp_pose 와 같은 규약(원시 grasp 프레임, base_link).
+# 이걸 같이 주는 게 핵심이다 — 실패할 때마다 GPU 추론을 다시 돌리면 수십 초가 날아간다.
+geometry_msgs/PoseStamped[] alternatives
+
+# alternatives[i] 의 폭 [m]. width_m 과 같은 규약이고 **길이가 alternatives 와 같다**.
+# 이 배열이 없으면 대안으로 갈아탄 뒤에도 1등 폭으로 닫아 조용히 헛집는다.
+float64[] alternative_widths

@@ -1,0 +1,17 @@
+<library path="pick_fsm">
+  <class name="PickFsmPanel" type="pick_fsm.rqt_panel.PickFsmPanel" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      pick_fsm 상태 감시 + 승인/중단/안전모드(backdrive) 조작 패널.
+    </description>
+    <qtgui>
+      <group>
+        <label>cobot2</label>
+        <icon type="theme">applications-utilities</icon>
+        <statustip>cobot2_ws 전용 플러그인.</statustip>
+      </group>
+      <label>Pick FSM</label>
+      <icon type="theme">dialog-warning</icon>
+      <statustip>pick_fsm 상태 감시와 승인/안전모드 조작.</statustip>
+    </qtgui>
+  </class>
+</library>

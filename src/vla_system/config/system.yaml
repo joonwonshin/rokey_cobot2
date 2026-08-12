@@ -1,0 +1,134 @@
+vla_perception:
+  ros__parameters:
+    scene_topic: /vla/scene
+    annotated_topic: /vla/perception/annotated_image
+
+    # The fixed D435i that cobot2_ws's pick_fsm also uses (shared hardware,
+    # confirmed 2026-08-10). Subscribed, not opened directly -- two independent
+    # V4L2 opens of the same RealSense device race (2026-08-11 finding,
+    # docs/context/constraints.md "카메라 구성"). Whoever launches
+    # realsense2_camera (cobot2_ws when integrated, this ws's own launch when
+    # run standalone) owns the device; this is just a subscriber.
+    image_topic: /camera/camera/color/image_raw
+    # Inference is synchronous, so this is an upper bound: a frame slower than
+    # the tick just delays the next one rather than piling up work.
+    capture_rate_hz: 15.0
+    # A frame older than this is a real position for an object that has since
+    # moved -- withheld rather than published stale.
+    max_image_age_s: 2.0
+
+    # Written by 'ros2 run vla_system table_homography_test'. Without it the
+    # scene still lists objects, but none of them get a base position.
+    calibration_file: ~/.ros/vla_table_homography.json
+    # Added to the fitted tabletop height to get the grasp Z, because the robot
+    # closes its gripper exactly at the Z it is handed and the homography can
+    # only report where the *table* is. A blunt stand-in for object height: one
+    # overhead view cannot measure it. Raise it for tall objects.
+    grasp_height_offset_m: 0.15
+    # Outside the calibrated quadrilateral the homography extrapolates. Keep
+    # true so those objects are reported but never given a coordinate.
+    require_inside_table: true
+
+    # yolo26s-seg on the discrete NVIDIA GPU. The instance masks are what keep
+    # the colour vote and the mapped pixel on the object itself.
+    backend: pytorch
+    model: ""
+    device: cuda:0
+    imgsz: 640
+    confidence: 0.35
+    max_detections: 30
+    target_classes:
+      - apple
+      - banana
+      - orange
+      - cup
+      - bottle
+      - wine glass
+      - book
+      - mouse
+      - cell phone
+      - remote
+      - sports ball
+      - teddy bear
+      - clock
+      - scissors
+      - knife
+    excluded_classes:
+      - person
+    classify_color: true
+    # Use the instance masks for the colour vote and for the pixel that gets
+    # mapped onto the table, instead of the bounding box. Set false to go back
+    # to boxes (also the automatic behaviour if the model has no masks).
+    use_masks: true
+    torch_threads: 4
+    publish_annotated: true
+
+    tracker_iou_threshold: 0.3
+    tracker_max_missed_frames: 5
+    velocity_smoothing: 0.5
+    report_interval: 5.0
+
+vla_agent:
+  ros__parameters:
+    utterance_topic: /vla/user_utterance
+    scene_topic: /vla/scene
+    robot_state_topic: /vla/robot/state
+    action_topic: /vla/robot/action
+    stop_topic: /vla/robot/stop
+    estop_topic: /vla/estop
+    reset_topic: /vla/robot/reset
+    reply_topic: /vla/agent/reply
+
+    model: gpt-5-mini
+    stt_model: gpt-4o-transcribe
+    env_file: ""
+    request_timeout_s: 30.0
+    # Tool rounds inside one decision. Enough for "wrong id -> correct it ->
+    # act", not enough for a runaway loop.
+    max_tool_rounds: 4
+    # Conversation items kept before old turns are dropped from the front.
+    max_history_items: 60
+    # Consecutive non-succeeded actions before auto-continue stops and the
+    # agent asks the user instead of retrying forever.
+    max_consecutive_failures: 3
+    continue_after_action: true
+    # Tier 1 -- 규칙 계층. 2026-08-11부터 기본 켜짐(검증이 끝나 기본이 됐다,
+    # md/A4_INTEGRATION.md §7). 끄면 이 노드는 계층이 없던 때와 똑같이
+    # 동작한다 -- 되돌리기가 revert가 아니라 파라미터다.
+    skill_tier_enabled: true
+    rule_store_path: "~/.ros/vla_rules.json"
+
+vla_pick_bridge:
+  ros__parameters:
+    action_topic: /vla/robot/action
+    stop_topic: /vla/robot/stop
+    estop_topic: /vla/estop
+    reset_topic: /vla/robot/reset
+    state_topic: /vla/robot/state
+    scene_topic: /vla/scene
+    # cobot2_ws's vla_command_node -- a different process in a different git
+    # clone. These two must match its command_topic/result_topic defaults
+    # exactly (voice_processing/vla_command_node.py). Same machine only, per
+    # the current same-PC architecture (docs/state.md "cobot2_ws 통합" #2 --
+    # still needs its own confirmation).
+    pick_command_topic: /vla/pick_command
+    pick_result_topic: /vla/pick_result
+    max_scene_age_s: 2.0
+    # cobot2_ws's own wait_timeout_sec default is 50s (vla_command_node) --
+    # stay above it so a slow-but-real answer is never mistaken for a dead
+    # one. Bumped 60->120 (2026-08-11): real pick_and_place runs were cutting
+    # off after arrival with no /vla/pick_result -- if the motion itself is
+    # taking >50s, cobot2_ws's own wait_timeout_sec likely also needs raising
+    # there (that side isn't checked from here).
+    result_timeout_s: 120.0
+    # "Is motion enabled" has no real switch on this side any more -- true
+    # because the point of routing through this bridge is that motion really
+    # does happen, just on cobot2_ws's arm.
+    motion_enabled: true
+    # table/discard place joints were taught on real hardware 2026-08-11
+    # (vla-bridge-contract.md #5/#7 -- cobot2_ws pick_fsm.yaml is the
+    # source of truth for the taught values). cobot2_ws's own guard is
+    # already open on its side; this was the last remaining gate. First
+    # integrated table/discard cycle is still unverified end-to-end --
+    # run it slow and supervised.
+    allow_unverified_place: true

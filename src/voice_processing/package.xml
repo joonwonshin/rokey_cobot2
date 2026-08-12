@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>voice_processing</name>
+  <version>0.0.0</version>
+  <description>음성/VLA 지시를 pick_fsm 의 /get_keyword 계약으로 옮기는 지시 입력 층</description>
+  <maintainer email="rokey@todo.todo">rokey</maintainer>
+  <license>TODO: License declaration</license>
+
+  <!-- vla_command_node 가 쓰는 전부. 표준 ROS 2 만 쓴다 -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- get_keyword(마이크·STT·LLM) 전용 파이썬 의존성은 rosdep 키가 없다:
+       openai / langchain-openai / python-dotenv / pyaudio / openwakeword / sounddevice.
+       apt 로 안 깔리므로 여기 적지 않는다 — 그 노드를 쓸 때만 사람이 따로 설치한다.
+       vla_command_node 는 이것들을 하나도 import 하지 않는다. -->
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

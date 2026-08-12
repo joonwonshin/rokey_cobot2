@@ -1,0 +1,32 @@
+# 🔴 인터페이스 정의만 있고 **서버는 없다** (2026-08-12, 손목 eye-in-hand seam).
+#    빌드만 통과시켜 두는 자리다. 부르면 응답할 노드가 없다.
+#
+# 왜 미리 두는가 — ComputeGrasp 가 두 질문을 한 bool 에 묶어 놨기 때문이다:
+#
+#     "물체를 찾았나?"  와  "그 물체를 어떻게 잡을지 알아냈나?"
+#
+# ComputeGrasp.success=false 는 둘 중 어느 쪽이 실패했는지 말하지 않는다. 그래서
+# **"물체는 보이는데 grasp 를 못 찾았다"는 상태를 지금 표현할 방법이 없고**, 그 결과
+# fallback 자체가 불가능하다 — 손목 카메라의 존재 이유가 바로 그 경우(가까이 가서
+# 다시 보면 잡을 수 있다)인데, 거기까지 갈 길이 없다.
+#
+# 이 서비스는 앞의 질문만 답한다. grasp 는 ComputeGrasp 가 계속 맡는다.
+# 서버가 생기면 _st_perceive 가 이걸 먼저 부르고, 실패해도 centroid/OBB 만으로
+# SCENE_PREP → 관측 자세 접근까지 진행할 수 있게 된다.
+#
+# 관련: md/plans/2026-08-12-vlm-fsm-integration-handoff.md §P6
+
+string  target              # 클래스 이름. 빈 문자열 = 아무거나
+float32 min_confidence      # 0.0 = 노드 기본값을 쓴다
+---
+bool    target_found
+string  message             # 실패 사유(사람이 읽는다). 성공이어도 경고가 실릴 수 있다
+
+string  object_id           # 추적 id. 재조회·중복 방지에 쓴다
+string  class_name
+
+# base_link 기준. grasp 자세가 아니라 **물체가 어디 있는가**다 —
+# 관측 자세(observation pose)를 만들고 CollisionObject 를 등록하는 데 쓴다.
+geometry_msgs/Point centroid_3d
+float32[6]          obb     # x,y,z,dx,dy,dz (base_link)
+float32             confidence

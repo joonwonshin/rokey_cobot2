@@ -1,0 +1,115 @@
+# YOLO-seg + GraspGenX 실행 컨테이너 (`od_kimkh`)
+#
+# 원본 이미지를 `docker history` 로 뜯어 재구성한 것이다. 원본 구성은 이랬다:
+#
+#   ros:humble-ros-base  (공식 OSRF 이미지)
+#     └─ 9.57GB 한 층, CreatedBy = "bash"
+#
+# 즉 **누군가 컨테이너에 들어가 손으로 설치하고 `docker commit` 한 것**이라 원본
+# Dockerfile 이 애초에 없다. 그래서 이 파일은 돌고 있는 컨테이너를 실측해 그 9.57GB
+# 층을 명령으로 되살린 것이다:
+#
+#   docker/apt-full.txt              dpkg -l 전체 903개 (참고용 원본 기록)
+#   docker/apt-ros-graspx.txt        ros-humble-* 197개  → 아래에서 설치
+#   docker/requirements-graspx.txt   pip **실설치분 50개** → 아래에서 설치
+#
+# 🔴 requirements 가 `pip list`(114개) 그대로가 아닌 이유: 그 목록엔 **apt 가 넣은
+#    파이썬 패키지 68개**(PyGObject·colcon-*·rosdep·pytest…)가 섞여 있다. 그걸 pip 로
+#    다시 설치하려 하면 pygobject 가 cairo 헤더를 못 찾아 **빌드가 통째로 실패한다**
+#    (실제로 겪었다). 그래서 `/usr/local/` 밑에 설치된 것만 골라냈다 — 그게 진짜
+#    수동 설치분이고, apt 쪽은 위 ROS 단계에서 의존성으로 딸려 온다.
+#
+# 🔴 베이스가 `nvidia/cuda:*` 가 아니다. 원본에 `/usr/local/cuda` 가 없고
+#    torch 가 `2.13.0+cu130` — **pip wheel 이 CUDA 를 통째로 들고 온다.** GPU 접근은
+#    실행 시 `--gpus all`(nvidia-container-toolkit)이 주입한다. cuda 베이스를 쓰면
+#    이미지가 몇 GB 커지기만 하고 얻는 게 없다.
+#
+# 🔴 원본과 다를 수 있는 것: apt 는 **버전을 고정하지 않았다**(pin 하면 우분투 저장소가
+#    옛 버전을 지운 뒤 빌드가 통째로 실패한다). 정확한 버전이 필요하면 apt-full.txt 를
+#    보고 `pkg=버전` 으로 바꾼다. pip 은 == 로 전부 고정돼 있다.
+#
+# 빌드
+#   docker build -f docker/Dockerfile.graspx -t od_kimkh:rebuilt docker
+#
+# 기동 — 🔴 마운트 경로가 호스트와 **같아야** 한다.
+#   scripts/fsm/graspx_container.sh 가 호스트 경로를 그대로 컨테이너 안에서 source 한다.
+#   다르면 `install/setup.bash: No such file or directory` 로 죽는다.
+#
+#   docker run -d --name od_kimkh \
+#     --gpus all --network host --ipc host \
+#     -e DISPLAY=$DISPLAY -e ROS_DOMAIN_ID=93 -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
+#     -v /tmp/.X11-unix:/tmp/.X11-unix \
+#     -v $PWD:$PWD \
+#     od_kimkh:rebuilt sleep infinity
+
+FROM ros:humble-ros-base
+
+SHELL ["/bin/bash", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+# ── 빌드 도구 · 시스템 라이브러리 ────────────────────────────────────────
+# opencv 는 여기서 apt 로 넣지 않는다. 원본 컨테이너가 pip 의
+# `opencv-python==4.11.0.86` 을 쓰고 있어서(=/usr/local 에 설치돼 있다) 그대로 맞춘다.
+#
+# ⚠️ 호스트 쪽 규칙("pip opencv-python 금지 → apt python3-opencv")과 반대로 보이지만,
+#    그 규칙은 **rclpy 와 Qt GUI 가 같은 프로세스에 뜨는 호스트** 이야기다. 이 컨테이너는
+#    GUI 를 안 띄우므로 그 충돌이 성립하지 않고, 실제로 원본이 이렇게 돌고 있었다.
+#    아래 libgl/libglib 는 headless opencv 가 요구하는 런타임 라이브러리다.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential cmake git curl ca-certificates \
+        python3-pip python3-dev \
+        libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── ROS 패키지 197개 ─────────────────────────────────────────────────────
+# 원본 컨테이너의 `dpkg -l ros-humble-*` 를 그대로 넣는다. ros-base 에 이미 있는 것은
+# apt 가 알아서 건너뛴다.
+COPY apt-ros-graspx.txt /tmp/apt-ros.txt
+RUN apt-get update \
+    && xargs -a /tmp/apt-ros.txt apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/apt-ros.txt
+
+# ── Python 50개 ──────────────────────────────────────────────────────────
+# torch 2.13.0+cu130 은 PyPI 기본 인덱스에 없다 -- PyTorch 의 cu130 인덱스가 필요하다.
+# 그게 CUDA 런타임을 통째로 들고 오므로 시스템 CUDA 설치가 없다.
+#
+# 🔴 **같은 파일을 -r 과 --constraint 로 동시에 준다.** 이게 핵심이다.
+#    `-r` 만 주면 pip 이 **전이 의존성으로 핀을 덮어쓴다** -- 실제로 겪었다:
+#    numpy 를 1.26.4 로 고정해 뒀는데 torch·ultralytics 가 2.2.6 을 끌어올렸고,
+#    그러면 Humble 의 cv_bridge 가 `AttributeError: _ARRAY_API not found` 로 죽는다
+#    (컴파일된 boost 확장이 numpy 1 ABI 로 빌드돼 있다). opencv 도 4.11 → 5.0 으로
+#    올라갔다. `--constraint` 로 같은 파일을 걸면 전이 해석도 그 핀을 못 넘는다.
+COPY requirements-graspx.txt /tmp/req.txt
+RUN python3 -m pip install --no-cache-dir --upgrade pip \
+    && python3 -m pip install --no-cache-dir \
+         --extra-index-url https://download.pytorch.org/whl/cu130 \
+         --constraint /tmp/req.txt \
+         -r /tmp/req.txt \
+    && rm -f /tmp/req.txt
+
+# 원본과 어긋나면 **여기서 빌드를 실패시킨다.** 이미지가 만들어진 뒤 실기에서
+# `_ARRAY_API not found` 로 알게 되는 것보다 낫다.
+RUN python3 - <<'PY'
+import sys
+import numpy, cv2, torch
+fails = []
+if not numpy.__version__.startswith("1."):
+    fails.append(f"numpy {numpy.__version__} -- cv_bridge 가 numpy 1 ABI 로 빌드돼 있다")
+if not cv2.__version__.startswith("4.11"):
+    fails.append(f"opencv {cv2.__version__} -- 원본은 4.11.0.86")
+if not torch.__version__.startswith("2.13.0+cu"):
+    fails.append(f"torch {torch.__version__} -- 원본은 2.13.0+cu130 (CUDA 포함 wheel)")
+if fails:
+    print("\n".join("  " + f for f in fails), file=sys.stderr)
+    sys.exit(1)
+print(f"OK  numpy {numpy.__version__} / cv2 {cv2.__version__} / torch {torch.__version__}")
+PY
+
+ENV ROS_DOMAIN_ID=93
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+# 원본과 같다 -- 컨테이너는 떠 있기만 하고 노드는 `docker exec` 로 띄운다.
+# 이유는 scripts/fsm/graspx_container.sh 상단 주석에 있다
+# (`docker exec` 엔 --sig-proxy 가 없어 호스트 Ctrl-C 가 전달되지 않는다).
+CMD ["sleep", "infinity"]

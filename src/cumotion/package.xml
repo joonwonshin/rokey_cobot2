@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cumotion</name>
+  <version>0.0.0</version>
+  <description>
+    MoveIt(+cuMotion+nvblox) 스택을 파이썬으로 제어한다. 계획을 반복해서 다시 던지고
+    실행 중인 궤적을 갈아끼워 실행 중 동적 장애물 회피를 만든다.
+    (cuMotion 은 계획 요청 1건당 ESDF 를 1번만 읽으므로 이 루프가 없으면 회피가 안 된다)
+  </description>
+  <maintainer email="joon5514@naver.com">joon</maintainer>
+  <license>TODO: License declaration</license>
+
+  <!-- 계획: /move_action (MoveGroup 액션) -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+
+  <!-- 실행: /dsr01/dsr_moveit_controller/follow_joint_trajectory -->
+  <exec_depend>control_msgs</exec_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <!-- 감시용: /curobo/voxels (cuMotion 이 장 본 장애물). 장애물 데이터 통로가 아니다 —
+       nvblox ESDF 는 cumotion_planner_node 가 서비스로 직접 pull 한다. README 2절 참고. -->
+  <exec_depend>visualization_msgs</exec_depend>
+
+  <!-- 비상정지: /dsr01/motion/move_stop. arm.py 가 optional import 로 감싸고 있어서
+       이 패키지가 없는 환경에서도 import 자체는 되지만, 실기에서는 반드시 있어야 한다. -->
+  <exec_depend>dsr_msgs2</exec_depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

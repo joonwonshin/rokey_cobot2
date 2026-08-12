@@ -1,0 +1,136 @@
+# dynamic_avoid.yaml — cumotion/dynamic_avoid 노드 파라미터
+#
+# 이 노드가 하는 일: MoveIt(+cuMotion+nvblox)에 계획을 3 Hz로 다시 던지고,
+# 실행 중인 궤적을 새 궤적으로 갈아끼워 **실행 중 동적 장애물 회피**를 만든다.
+#
+# 사용:
+#   ros2 launch cumotion dynamic_avoid.launch.py mode:=check
+#   ros2 run cumotion dynamic_avoid --ros-args --params-file <이 파일> -p mode:=pingpong
+#
+# ⚠️ 이 파일은 로봇을 **실제로 움직이는** 노드의 설정이다. cumotion_planner.yaml 처럼
+#    "계획만 하는" 파일이 아니다. vel_scale 을 만질 땐 사람이 옆에 있어야 한다.
+
+/**:
+  ros__parameters:
+
+    # ═══════════════════ 무엇을 할지 ═══════════════════
+    # check    : 노드/토픽 점검 + 제자리 계획 1회 (로봇 안 움직임). 항상 이걸 먼저 돌린다
+    # joint    : goal_joint_deg 로 1회 이동
+    # pose     : goal_pose 로 1회 이동 (TCP)
+    # pingpong : pingpong_a_deg ↔ pingpong_b_deg 무한 왕복 (동적 회피 시연)
+    mode: "check"
+
+    goal_joint_deg: [0.0, 0.0, 90.0, 0.0, 90.0, 0.0]     # mode:=joint
+    goal_pose:      [0.45, 0.0, 0.35, 180.0, 0.0, 0.0]   # mode:=pose — x y z(m) roll pitch yaw(deg)
+
+    # ⚠️ 안전 검증된 자세가 아니다. 실기 전에 mode:=joint 로 각각 따로 한 번씩 가보고 눈으로 확인할 것.
+    pingpong_a_deg: [ 45.0, 0.0, 90.0, 0.0, 90.0, 0.0]
+    pingpong_b_deg: [-45.0, 0.0, 90.0, 0.0, 90.0, 0.0]
+    cycles: 0                     # 왕복 횟수. 0 = 무한 (Ctrl+C 로 감속 정지)
+
+    # ═══════════════════ 🔴 재계획 루프 — 이 패키지의 핵심 ═══════════════════
+    # cuMotion 은 **계획 요청 1건당 ESDF 를 딱 1번** 읽는다(cumotion_planner.yaml 참고).
+    # 즉 계획을 다시 던지지 않으면 실행 중 회피는 원리적으로 불가능하다.
+
+    # 재계획 주파수.
+    # ⚠️ 3 Hz 위로 올려도 **새 정보가 없다.** robot_segmenter_node 가 3.7 Hz 라 nvblox
+    #    지도 자체가 그 속도로만 갱신된다(config/README.md 병목). GPU 부하만 늘어난다.
+    replan_hz: 3.0
+
+    # 인계 선행시간(초). "지금"이 아니라 "지금+lookahead" 시점의 궤적 위 상태에서 계획을 시작한다.
+    # 계획에 wall 204 ms 걸리므로(testcommand.md 실측), 현재 상태로 계획하면 결과가 나올 땐
+    # 로봇이 이미 그 지점을 지나쳐 있다 → 인계 시 점프 → max_start_jump 에 걸려 폐기된다.
+    # 🔴 조건: lookahead_s > (계획시간) + handover_s.  vel_scale 을 올리면 이것도 올린다.
+    lookahead_s: 0.35
+
+    # 새 궤적을 이만큼(초) 뒤로 민다. JTC 가 첫 점까지 현재 실측값에서 보간해 들어가므로
+    # 예측이 조금 어긋나도 계단식 점프 대신 부드럽게 올라탄다.
+    # 0 이면 즉시 점프(덜컹), 키우면 반응이 그만큼 느려진다. 덜컹이면 0.05 → 0.1.
+    handover_s: 0.05
+
+    # 새 궤적 첫 점이 실측 관절값에서 이만큼(rad) 넘게 떨어지면 발행하지 않고 버린다.
+    # 이 경고가 반복되면 lookahead_s 를 올리거나 vel_scale 을 낮춘다.
+    max_start_jump: 0.25
+
+    # 🔴 교체 문턱(rad). 새 궤적이 지금 달리는 궤적과 이만큼도 안 다르면 **교체하지 않는다.**
+    #
+    #   이게 없으면 로봇이 목표에 못 간다. 2026-08-07 실기 실측 (45° 이동, vel 0.15, 장애물 없음):
+    #     static:=true (재계획 OFF) → 계획 1회, 7.7초 만에 도착
+    #     3 Hz 재계획               → 교체 155회, 60초 타임아웃까지 도착 실패
+    #   cuMotion 은 매번 **정지 상태에서 출발하는** 7.7초짜리 완결 궤적을 준다. 그걸 0.33초마다
+    #   갈아끼우면 매 궤적의 앞 4%(가속 램프)만 실행하고 버리게 되어 속도가 영영 안 붙는다.
+    #   그래서 계획은 계속 던지되(=장애물 감시 유지) 궤적이 실제로 달라졌을 때만 교체한다.
+    #
+    #   ⚠️ 실기 튜닝 안 된 추정값이다.
+    #      크게 → 장애물이 와도 교체를 안 한다(회피가 죽는다)
+    #      작게 → 위의 기어감이 재현된다
+    #      점검: mode:=joint 도착시간이 static(7.7초)에 근접하는가 / summary 의 "생략" 수가
+    #            장애물 없을 때 교체 수보다 훨씬 큰가
+    swap_threshold_rad: 0.05
+
+    max_consecutive_failures: 4   # 계획이 이만큼 연속 실패하면 감속 정지 후 종료
+    timeout_s: 60.0               # 목표 1개당 제한시간(초). 넘으면 감속 정지
+
+    # 🔴 true = 재계획 끄기(최초 1회만 계획). **대조군 실험 전용**이다.
+    #    장애물이 들어와도 그대로 밀고 간다. false 와의 차이가 "동적 회피가 되는가"의 유일한 증거.
+    static_mode: false
+
+    # ═══════════════════ 속도 ═══════════════════
+    # cumotion_planner.yaml 이 override_moveit_scaling_factors: false 이므로
+    # **여기서 보낸 값이 이긴다.** time_dilation_factor(0.8)가 아니라 이게 실제 속도다.
+    # ⚠️ 실기 첫 실행은 0.15. 파이프라인 지연이 ~0.6 s 라 빠를수록 회피 여유가 줄어든다.
+    vel_scale: 0.15
+    acc_scale: 0.15
+
+    # ═══════════════════ MoveIt 쪽 이름 ═══════════════════
+    group_name: "manipulator"          # SRDF 의 planning group
+    base_frame: "base_link"            # 🔴 nvblox_realtime.yaml 의 global_frame 과 같아야 한다
+    ee_link: "tool0"                   # pose goal 을 거는 링크
+    move_action: "/move_action"
+
+    # "isaac_ros_cumotion" | "ompl"
+    # ompl 로 바꾸면 nvblox ESDF 가 아니라 MoveIt octomap 을 보고 같은 루프를 돈다(플래너 비교용).
+    pipeline_id: "isaac_ros_cumotion"
+
+    allowed_planning_time: 5.0
+    num_planning_attempts: 1
+    joint_goal_tol: 0.01               # 도착 판정 허용오차(rad, 최대 성분오차)
+
+    # ═══════════════════ 두산 쪽 이름 ═══════════════════
+    # ⚠️ 앞의 /dsr01/ 은 오타가 아니다. bringup 의 controller_manager 가 dsr01 네임스페이스에 있어서
+    #    컨트롤러 액션도 그 밑에 뜬다. 절대경로로 적어야 이 노드의 네임스페이스를 건너뛴다.
+    fjt_action: "/dsr01/dsr_moveit_controller/follow_joint_trajectory"
+    stop_service: "/dsr01/motion/move_stop"
+
+    # 🔴 /joint_states 에 velocity 가 비어 있으면 cuMotion 계획이 전부 실패한다.
+    #    bringup.launch.py 의 publish_default_velocities: True 가 그 대책(커밋됨).
+    joint_states_topic: "/joint_states"
+    joint_names: ["joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"]
+
+    # ═══════════════════ 🔴 장애물 파이프라인 감시 ═══════════════════
+    # ⚠️ 이 노드는 nvblox 를 **구독하지 않는다.** 장애물은 우리를 안 거치고 들어간다:
+    #
+    #   nvblox_node ──서비스── /nvblox_node/get_esdf_and_gradient
+    #                              ▲ cumotion_planner_node 가 pull
+    #                       cumotion_planner_node ── cuRobo 충돌월드
+    #                              ▲ /cumotion/move_group
+    #                       move_group (cuMotion 플러그인)
+    #                              ▲ /move_action  ← 이 노드는 여기만 잡는다
+    #
+    # 즉 계획을 던지는 것 자체가 nvblox 에 ESDF 를 물어보는 트리거다.
+    # 아래 값들은 "그 경로가 실제로 살아 있나"를 확인하는 감시용이지, 데이터 통로가 아니다.
+
+    # cumotion_planner.yaml 의 esdf_service_name 과 같은 값이어야 한다.
+    # 🔴 이게 없으면 nvblox 가 죽은 것 → **계획은 성공하는데 장애물을 통과한다.**
+    esdf_service_name: "/nvblox_node/get_esdf_and_gradient"
+
+    # cumotion_planner.yaml 의 publish_curobo_world_as_voxels: true 가 내보내는 토픽.
+    # "cuMotion 이 장 본 장애물"이라 계획이 장애물을 봤다는 유일한 직접 증거다.
+    # ⚠️ 계획 요청 처리 중에만 발행된다 — 대기 중엔 안 온다(testcommand.md 8절).
+    voxel_topic: "/curobo/voxels"
+    monitor_voxels: true          # 궤적 교체마다 복셀 수를 로그에 남긴다
+
+    # 🔴 ESDF 서비스가 없으면 **움직이기를 거부**한다. 이 gate 가 없으면
+    #    "계획 성공 + 장애물 통과"를 로봇이 부딪힌 뒤에야 알게 된다.
+    #    pipeline_id:=ompl 로 쓸 땐 nvblox 가 필요 없으니 false 로 내린다.
+    require_obstacle_pipeline: true
