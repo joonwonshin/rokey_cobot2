@@ -2,6 +2,8 @@
 
 본 프로젝트는 ROS 2 Humble 환경에서 구현한 자연어 지시 기반 협동로봇 파지 시스템으로, Doosan M0609 매니퓰레이터와 OnRobot RG2 그리퍼가 연동하여 동작합니다. 사용자가 "사과 바구니에 담아줘"처럼 자연어로 지시하면 VLM(GPT-5-mini)이 명령과 카메라 이미지를 함께 해석하여 무엇을·몇 개를·어디로 옮길지 판단합니다. 판단 결과는 JSON 경계를 거쳐 deterministic FSM(`task_manager`)으로 전달되고, 작업대 옆에 고정된 RealSense D435i와 YOLO-seg가 대상 물체를 검출한 뒤 GraspGenX가 파지 후보를 생성하여 최적의 파지 자세를 선정합니다. FSM은 MoveIt(OMPL) 또는 cuMotion 모션 플래닝을 통해 물체에 접근해 집고(Pick), 지정된 위치에 내려놓습니다(Place). 작업 중 사람의 손이나 장애물이 감지되면 즉시 정지한 뒤 우회 경로를 재계획하여 작업을 이어갑니다.
 
+📎 **원본 저장소** — [wodud4143/DooSan_Robotics_VLA_Project](https://github.com/wodud4143/DooSan_Robotics_VLA_Project)
+
 > **핵심 설계 원칙**: 판단(LLM)과 안전(FSM)을 **한 프로세스에 섞지 않습니다.**
 > 두 계층은 JSON 3채널로만 연결되며, 모션 취소 · 그리퍼 개폐 · 물체 보유 상태 · 충돌 씬 관리는 모두 FSM이 담당합니다.
 > LLM 응답이 느려지거나 잘못되더라도 팔의 안전 동작에는 영향을 주지 않도록 설계했습니다.
